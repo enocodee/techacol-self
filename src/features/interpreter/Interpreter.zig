@@ -46,20 +46,20 @@ pub const Error = struct {
     /// TODO: display hints to fix error.
     pub fn render(err: Error, w: *std.Io.Writer) !void {
         try switch (err.tag) {
-            .main_not_found => w.print("requires the `main` function to run.\n", .{}),
+            .main_not_found => w.print("requires the `main` function to run.", .{}),
             .from_languages => {
                 for (err.extra.from_languages) |msg| {
                     try w.print("{s}\n", .{msg});
                 }
             },
-            .unknown_action => w.print("function `{s}` unknown.\n", .{err.token}),
+            .unknown_action => w.print("function `{s}` unknown.", .{err.token}),
             .expected_type_action => w.print(
-                "expected `{s}` type, found `{s}`.\n",
+                "expected `{s}` type, found `{s}`.",
                 .{ err.extra.expected_token, err.token },
             ),
             // TODO: remove this error
             .not_supported_type => w.print(
-                "not supported type `{s}`, please contact with developers if you see this error.\n",
+                "not supported type `{s}`, please contact with developers if you see this error.",
                 .{err.token},
             ),
         };
@@ -110,8 +110,8 @@ pub const Command = union(enum) {
         /// Initialized the arguments of a command based
         /// on `arg_value`.
         ///
-        /// Return null if the `arg_value` is invalid
-        /// (currently, only `value not found` in enums).
+        /// Return null if errors are exposed.
+        /// Error messages will be written to `interpreter.errors`.
         ///
         /// This function assert the `node_tag` should
         /// correspond to the command's arg types.
