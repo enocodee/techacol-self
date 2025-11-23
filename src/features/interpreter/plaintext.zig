@@ -9,24 +9,31 @@ pub fn parse(
     alloc: std.mem.Allocator,
     interpreter: *Interpreter,
     source: []const u8,
-) !Command {
-    // TODO: line iteration
-    const trimmed = std.mem.trim(u8, source, " ");
-    var iter = std.mem.splitScalar(u8, trimmed, ' ');
-
+) ![]Command {
     const command_parser: Command.Parser = .init(alloc, interpreter);
+    var commands: std.ArrayList(Command) = .empty;
+    var line_iter = std.mem.splitSequence(u8, source, "\r\n");
 
-    const cmd: []const u8 = iter.first();
-    const should_be_value = iter.next() orelse {
-        interpreter.appendError(alloc, .{
-            .tag = .expected_type_action,
-            .extra = .{ .expected_token = "arguments" },
-            .token = "empty",
-        });
-        return .none;
-    };
+    while (line_iter.next()) |line| {
+        var tokenizer = std.mem.tokenizeAny(u8, line, " ");
 
-    return command_parser.parse(cmd, should_be_value, .enum_literal);
+        const fn_name: []const u8 = tokenizer.next() orelse break;
+        const should_be_value = tokenizer.next() orelse {
+            try interpreter.appendError(alloc, .{
+                .tag = .expected_type_action,
+                .extra = .{ .expected_token = "arguments" },
+                .token = "empty",
+            });
+            break;
+        };
+        const cmd = try command_parser.parse(
+            fn_name,
+            should_be_value,
+            .enum_literal,
+        );
+        try commands.append(alloc, cmd);
+    }
+    return commands.toOwnedSlice(alloc);
 }
 
 test "parse action (plaintext)" {
@@ -43,7 +50,8 @@ test "parse action (plaintext)" {
     const result_1: Command = .{
         .move = .up,
     };
-    try std.testing.expectEqual(result_1, parsed_1);
+    try std.testing.expectEqual(1, parsed_1.len);
+    try std.testing.expectEqual(result_1, parsed_1[0]);
 
     const action_2 = "nothing arg";
     _ = try parse(alloc, &interpreter, action_2);
