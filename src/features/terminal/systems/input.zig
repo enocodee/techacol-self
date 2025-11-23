@@ -63,24 +63,23 @@ pub fn scan(
     }
 }
 
-pub fn process(w: *World, alloc: std.mem.Allocator, content: []const u8) !void {
+pub fn process(
+    w: *World,
+    alloc: std.mem.Allocator,
+    content: []const u8,
+    lang: Interpreter.Language,
+) !void {
     var interpreter: Interpreter = .{};
-    const cmds = try interpreter.parse(alloc, content, .plaintext);
+    const cmds = try interpreter.parse(alloc, content, lang);
 
-    const cmds_copy = try w.thread_pool.allocator.dupe(Interpreter.Command, cmds);
-    try w.thread_pool.spawn(doCmds, .{ alloc, w, cmds_copy });
+    try execCmds(w, cmds);
 }
 
-fn doCmds(alloc: std.mem.Allocator, w: *World, cmds: []const Interpreter.Command) void {
-    defer alloc.free(cmds);
-    var w_copy = w.*; // ensure the resources are synchronous in multi-threads.
-
+fn execCmds(w: *World, cmds: []const Interpreter.Command) !void {
     // TODO: time limit
     for (cmds) |c| {
-        std.Thread.sleep(std.time.ns_per_s * 1);
-        switch (c) {
-            .move => |direction| digger.action.control(&w_copy, direction) catch {}, //TODO: remove `catch`
-            .none => {},
-        }
+        try switch (c) {
+            .move => |direction| digger.action.control(w, direction),
+        };
     }
 }
