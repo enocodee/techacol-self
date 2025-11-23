@@ -87,10 +87,10 @@ pub const Command = union(enum) {
             cmd_name: []const u8,
             arg_value: []const u8,
             node_tag: std.zig.Ast.Node.Tag,
-        ) Command {
+        ) !Command {
             inline for (std.meta.fields(Command)) |f| {
                 if (std.mem.eql(u8, f.name, cmd_name)) {
-                    if (self.parseArg(
+                    if (try self.parseArg(
                         f.name,
                         arg_value,
                         node_tag,
@@ -100,7 +100,7 @@ pub const Command = union(enum) {
                 }
             }
 
-            self.interpreter.appendError(self.alloc, .{
+            try self.interpreter.appendError(self.alloc, .{
                 .tag = .unknown_action,
                 .token = cmd_name,
             });
@@ -120,14 +120,14 @@ pub const Command = union(enum) {
             comptime action: []const u8,
             arg_value: []const u8,
             node_tag: std.zig.Ast.Node.Tag,
-        ) ?@FieldType(Command, action) {
+        ) !?@FieldType(Command, action) {
             // TODO: handle more data types
             switch (@typeInfo(@FieldType(Command, action))) {
                 .@"enum" => {
                     std.debug.assert(node_tag == .enum_literal);
 
                     const action_type = @FieldType(Command, action);
-                    const normalized_action_type = utils.normalizedActionType(
+                    const normalized_action_type = try utils.normalizedActionType(
                         self.alloc,
                         @typeName(action_type),
                     );
@@ -136,7 +136,7 @@ pub const Command = union(enum) {
                         action_type,
                         arg_value,
                     ) orelse {
-                        self.interpreter.appendError(self.alloc, .{
+                        try self.interpreter.appendError(self.alloc, .{
                             .tag = .expected_type_action,
                             .extra = .{
                                 .expected_token = normalized_action_type,
@@ -162,18 +162,15 @@ pub fn parse(
     alloc: std.mem.Allocator,
     source: []const u8,
     lang: Language,
-) !Command {
+) ![]Command {
     const normalized_source = try utils.normalizedSource(alloc, source);
 
-    const action = try switch (lang) {
+    const actions = try switch (lang) {
         .zig => zig.parse(alloc, self, normalized_source),
-        .plaintext => blk: {
-            const sentinel_idx = std.mem.indexOfSentinel(u8, 0, normalized_source);
-            break :blk plaintext.parse(alloc, self, source[0..sentinel_idx]);
-        },
+        .plaintext => plaintext.parse(alloc, self, normalized_source),
     };
 
-    if (action == .none) {
+    if (actions.len > 0) {
         var aw = std.Io.Writer.Allocating.init(alloc);
         const errs = try self.errors.toOwnedSlice(alloc);
         for (errs) |err| {
@@ -182,10 +179,10 @@ pub fn parse(
         }
     }
 
-    return action;
+    return actions;
 }
 
 /// This function can cause to panic due to out of memory
-pub fn appendError(self: *Interpreter, alloc: std.mem.Allocator, err: Error) void {
-    self.errors.append(alloc, err) catch @panic("OOM");
+pub fn appendError(self: *Interpreter, alloc: std.mem.Allocator, err: Error) !void {
+    try self.errors.append(alloc, err);
 }
