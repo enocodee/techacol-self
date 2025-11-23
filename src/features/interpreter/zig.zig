@@ -33,13 +33,14 @@ pub fn parse(
     )) orelse return &.{};
 
     for (main.items) |node| {
-        const command = try command_parser.parse(
+        const maybe_cmd = try command_parser.parse(
             node.fn_name,
             node.arg_value,
             node.arg_node_tag,
         );
-
-        try commands.append(alloc, command);
+        if (maybe_cmd) |cmd| {
+            try commands.append(alloc, cmd);
+        }
     }
     return commands.toOwnedSlice(alloc);
 }

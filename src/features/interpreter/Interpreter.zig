@@ -68,7 +68,6 @@ pub const Error = struct {
 
 pub const Command = union(enum) {
     /// Nothing action will be executed, the parser should return errors
-    none,
     move: @import("../digger/mod.zig").action.MoveDirection,
 
     pub const Parser = struct {
@@ -87,7 +86,7 @@ pub const Command = union(enum) {
             cmd_name: []const u8,
             arg_value: []const u8,
             node_tag: std.zig.Ast.Node.Tag,
-        ) !Command {
+        ) !?Command {
             inline for (std.meta.fields(Command)) |f| {
                 if (std.mem.eql(u8, f.name, cmd_name)) {
                     if (try self.parseArg(
@@ -96,7 +95,7 @@ pub const Command = union(enum) {
                         node_tag,
                     )) |arg| {
                         return @unionInit(Command, f.name, arg);
-                    } else return .none;
+                    } else return null;
                 }
             }
 
@@ -104,7 +103,7 @@ pub const Command = union(enum) {
                 .tag = .unknown_action,
                 .token = cmd_name,
             });
-            return .none;
+            return null;
         }
 
         /// Initialized the arguments of a command based

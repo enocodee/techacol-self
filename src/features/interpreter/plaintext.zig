@@ -26,12 +26,15 @@ pub fn parse(
             });
             break;
         };
-        const cmd = try command_parser.parse(
+
+        const maybe_cmd = try command_parser.parse(
             fn_name,
             should_be_value,
             .enum_literal,
         );
-        try commands.append(alloc, cmd);
+        if (maybe_cmd) |cmd| {
+            try commands.append(alloc, cmd);
+        }
     }
     return commands.toOwnedSlice(alloc);
 }
