@@ -64,6 +64,7 @@ alloc: std.mem.Allocator,
 ///
 /// This allocator will be passed to the `systems` as a parameter.
 arena: *std.heap.ArenaAllocator,
+
 /// TODO:
 /// - [ ] Do cmds linearly and independently of the main core loop.
 /// - [ ] Spawn multiple parallel piplines.
@@ -352,6 +353,12 @@ pub fn run(self: *World) !void {
                 try system.@"fn"(self, self.arena.allocator());
         }
         rl.clearBackground(.white);
+        // FIX: when this is called, resources in spawned threads
+        // which are executing also being freed.
+        // TODO: pass `alloc` as an argument for each function in ECS
+        // to free immedately resources after finish & threads can handle
+        // memory for each cmd.
+        //
         // free all things are allocated by `world.arena`
         _ = self.arena.reset(.free_all);
     }
