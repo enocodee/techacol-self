@@ -65,10 +65,13 @@ pub fn scan(
 
 pub fn process(w: *World, alloc: std.mem.Allocator, content: []const u8) !void {
     var interpreter: Interpreter = .{};
+    const cmds = try interpreter.parse(alloc, content, .plaintext);
 
-    const action = try interpreter.parse(alloc, content, .plaintext);
-    switch (action) {
-        .move => |direction| try digger.action.control(w, direction),
-        .none => {},
+    // TODO: time limit
+    for (cmds) |c| {
+        switch (c) {
+            .move => |direction| digger.action.control(w, direction) catch {},
+            .none => {},
+        }
     }
 }
