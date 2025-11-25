@@ -42,6 +42,7 @@ test "normalized action type" {
     );
 }
 
+/// The caller should `free` the return value.
 /// Normalized the source code:
 /// * Trimming.
 /// * Remove null-character.
