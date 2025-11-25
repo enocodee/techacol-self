@@ -1,3 +1,5 @@
+// TODO: should i create an AST Parser and make this
+// as a new scripting language (just use ingame)?
 const std = @import("std");
 
 const Interpreter = @import("Interpreter.zig");
@@ -10,7 +12,7 @@ pub fn parse(
     interpreter: *Interpreter,
     source: []const u8,
 ) ![]Command {
-    const command_parser: Command.Parser = .init(alloc, interpreter);
+    const command_parser: Command.Parser = .init(interpreter);
     var commands: std.ArrayList(Command) = .empty;
     var line_iter = std.mem.splitSequence(u8, source, "\r\n");
 
@@ -27,11 +29,24 @@ pub fn parse(
             break;
         };
 
-        const maybe_cmd = try command_parser.parse(
-            fn_name,
-            should_be_value,
-            .enum_literal,
-        );
+        var maybe_cmd: ?Command = null;
+        if (std.mem.eql(u8, fn_name, "if")) {
+            // TODO: remove this
+            maybe_cmd = try command_parser.parse(
+                alloc,
+                "if",
+                Command.IfStatementInfo{ .condition_value = true, .num_of_cmds = 0 },
+                .enum_literal,
+            );
+        } else {
+            maybe_cmd = try command_parser.parse(
+                alloc,
+                fn_name,
+                should_be_value,
+                .enum_literal,
+            );
+        }
+
         if (maybe_cmd) |cmd| {
             try commands.append(alloc, cmd);
         }
