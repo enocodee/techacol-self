@@ -251,7 +251,7 @@ pub fn getComponent(
     self: World,
     entity_id: EntityID,
     comptime T: type,
-) !T {
+) GetComponentError!T {
     const s = try ErasedComponentStorage.cast(self, T);
     return s.data.get(entity_id) orelse GetComponentError.ValueNotFound;
 }
@@ -503,6 +503,7 @@ test "get keys of min storage" {
     try std.testing.expectEqualSlices(u64, &.{1}, k2.items);
 }
 
+pub const QueryError = error{OutOfMemory} || GetComponentError;
 /// Get entities's components
 ///
 /// # Examples:
@@ -520,7 +521,7 @@ test "get keys of min storage" {
 pub fn query(
     self: World,
     comptime types: []const type,
-) ![]std.meta.Tuple(types) {
+) QueryError![]std.meta.Tuple(types) {
     const alloc = self.arena.allocator();
     // The temporarily list to contain entity ids from `types[index]`
     var temp_list: std.ArrayList(EntityID) = .empty;
