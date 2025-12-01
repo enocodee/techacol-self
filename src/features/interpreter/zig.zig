@@ -113,6 +113,7 @@ pub fn parseNode(
     return switch (node_tag) {
         .call_one => try parseCallNode(alloc, command_parser, ast, idx, list),
         .if_simple => try parseIfNode(alloc, command_parser, ast, idx, list),
+        .for_simple => try parseForNode(alloc, command_parser, ast, idx, list),
         else => unreachable, // unsupported node tag
     };
 }
@@ -184,7 +185,7 @@ fn parseIfNode(
     list.items[items_count].@"if".num_of_cmds = num_of_cmds;
 }
 
-/// Parse condition expressions in `if`, `for`, `while` statements
+/// Parse condition expressions in `if`, `while` statements
 pub fn parseCondExpr(
     alloc: std.mem.Allocator,
     command_parser: *Command.Parser,
@@ -244,6 +245,51 @@ pub fn parseCondExpr(
     }
 
     return cond;
+}
+
+fn parseForNode(
+    alloc: std.mem.Allocator,
+    command_parser: *Command.Parser,
+    ast: Ast,
+    idx: Ast.Node.Index,
+    list: *std.ArrayList(Command),
+) !void {
+    const node_data = ast.nodeData(idx).node_and_node;
+
+    const item_count = list.items.len;
+    const default: Command = get_default_cmd: {
+        const cond_expr_idx = node_data[0];
+        const cond_node_tag = ast.nodeTag(cond_expr_idx);
+        const cond_node_data = ast.nodeData(cond_expr_idx).node_and_opt_node;
+        // TODO: remove this assert
+        std.debug.assert(cond_node_tag == .for_range);
+
+        const lhs_str = ast.tokenSlice(ast.nodeMainToken(cond_node_data[0]));
+        const lhs = try std.fmt.parseInt(usize, lhs_str, 10);
+        const rhs_str = ast.tokenSlice(ast.nodeMainToken(cond_node_data[1].unwrap().?));
+        const rhs = try std.fmt.parseInt(usize, rhs_str, 10);
+        break :get_default_cmd .{
+            .@"for" = .{
+                .start_idx = item_count,
+                .condition = .{
+                    .range = .{ .start = lhs, .end = rhs },
+                },
+            },
+        };
+    };
+    try list.append(alloc, default);
+
+    const semi_node_idx = node_data[1];
+    var body_node_idxs_buf: [2]Ast.Node.Index = undefined;
+    const body_node_idxs = ast.blockStatements(&body_node_idxs_buf, semi_node_idx).?;
+    var num_of_cmds: u64 = 0;
+
+    for (body_node_idxs) |i| {
+        num_of_cmds += 1;
+        try parseNode(alloc, command_parser, ast, i, list);
+    }
+
+    try list.append(alloc, .{ .end_for = {} });
 }
 
 fn extractErrorFromAst(

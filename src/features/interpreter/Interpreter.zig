@@ -125,6 +125,8 @@ pub const Error = struct {
 /// operations*.
 pub const Command = union(enum) {
     @"if": IfStatementInfo,
+    @"for": ForStatementInfo,
+    end_for: void,
     // Commands in game
     move: @import("../digger/mod.zig").move.MoveDirection,
     isEdge: @import("../digger/mod.zig").check.EdgeDirection,
@@ -171,14 +173,19 @@ pub const Command = union(enum) {
             pub fn deinit(self: *CondExpr, alloc: std.mem.Allocator) void {
                 switch (self.*) {
                     .expr_and => |v| {
+                        v.@"0".deinit(alloc);
+                        v.@"1".deinit(alloc);
                         alloc.destroy(v[0]);
                         alloc.destroy(v[1]);
                     },
                     .expr_or => |v| {
+                        v.@"0".deinit(alloc);
+                        v.@"1".deinit(alloc);
                         alloc.destroy(v[0]);
                         alloc.destroy(v[1]);
                     },
                     .not_expr => |v| {
+                        v.@"0".deinit(alloc);
                         alloc.destroy(v[0]);
                     },
                     else => {},
@@ -196,6 +203,16 @@ pub const Command = union(enum) {
                 .num_of_cmds = 0,
             };
         }
+    };
+
+    pub const ForStatementInfo = struct {
+        condition: CondExpr,
+        /// The index of the `for` statement in list
+        start_idx: u64,
+
+        pub const CondExpr = union(enum) {
+            range: struct { start: usize, end: usize },
+        };
     };
 
     pub const Parser = struct {

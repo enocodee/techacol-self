@@ -22,6 +22,12 @@ pub const CommandExecutor = struct {
     //
     // `null` if this is used in the first time.
     last_bool_result: ?bool = null,
+    /// `null` if there aren't any loops running.
+    loop_state: ?struct {
+        start_idx: usize,
+        curr_iter_time: usize = 1,
+        total_iter: usize,
+    } = null,
     /// The timestamp of the previous command execution
     /// in miliseconds.
     /// The timer is started from the first commmands is added.
@@ -46,6 +52,17 @@ pub const CommandExecutor = struct {
         self.queue.deinit(self.alloc);
     }
 
+    pub fn clearQueue(self: *CommandExecutor, alloc: std.mem.Allocator) void {
+        for (self.queue.items) |*it| {
+            if (std.meta.activeTag(it.*) == .@"if") {
+                it.@"if".deinit(alloc);
+            }
+        }
+        self.curr_idx = 0;
+        self.count = 0;
+        self.queue.clearAndFree(alloc);
+    }
+
     pub fn enqueue(self: *CommandExecutor, cmd: Command) !void {
         self.is_running = true;
         self.timer = try .start();
@@ -53,12 +70,13 @@ pub const CommandExecutor = struct {
         self.count += 1;
     }
 
-    /// return the next node in the queue.
+    /// return the next node and increase the current idx in queue
     pub fn next(self: *CommandExecutor) ?Command {
         const idx = self.curr_idx;
         if (idx >= self.count) return null;
 
         const it = self.queue.items[idx];
+        self.curr_idx += 1;
         return it;
     }
 
@@ -75,12 +93,11 @@ pub const CommandExecutor = struct {
 
             if (lap > target_ns) {
                 if (self.next()) |command| {
-                    timer.reset();
-
                     try self.handleNode(w, command);
                 } else {
                     self.timer = null;
                     self.is_running = false;
+                    self.clearQueue(w.alloc);
                 }
             }
         }
@@ -92,11 +109,18 @@ pub const CommandExecutor = struct {
         command: Command,
     ) @import("ecs").World.QueryError!void {
         switch (command) {
-            .move => |direction| try digger.move.control(w, direction),
-            .isEdge => |direction| self.last_bool_result = try digger.check.isEdge(
-                w,
-                direction,
-            ),
+            .move => |direction| {
+                self.timer.?.reset();
+                try digger.move.control(w, direction);
+            },
+            .isEdge => |direction| {
+                self.timer.?.reset();
+                self.last_bool_result = try digger.check.isEdge(
+                    w,
+                    direction,
+                );
+            },
+            // NOTE: Language features
             .@"if" => |info| {
                 const cond_expr_result = try self.*.evaluateCondExpr(
                     w,
@@ -113,8 +137,28 @@ pub const CommandExecutor = struct {
                     }
                 }
             },
+            .@"for" => |info| {
+                const start_stmt_idx = self.curr_idx + info.start_idx;
+
+                switch (info.condition) {
+                    .range => |r| {
+                        const times = r.end - r.start;
+                        self.loop_state = .{
+                            .start_idx = start_stmt_idx,
+                            .total_iter = times,
+                        };
+                    },
+                }
+            },
+            .end_for => {
+                if (self.loop_state.?.curr_iter_time > self.loop_state.?.total_iter) {
+                    self.loop_state = null;
+                    return;
+                }
+                self.*.loop_state.?.curr_iter_time += 1;
+                self.curr_idx = self.*.loop_state.?.start_idx;
+            },
         }
-        self.curr_idx += 1;
     }
 
     /// return the final result of the condition expression of the `if` command
@@ -125,8 +169,6 @@ pub const CommandExecutor = struct {
         /// Number of cmds in the `if` body
         num_of_cmds: u64,
     ) !bool {
-        defer condition.deinit(self.alloc);
-
         switch (condition.*) {
             .value => |v| return v,
             .expr => {
