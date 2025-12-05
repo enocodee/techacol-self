@@ -126,7 +126,7 @@ pub const Error = struct {
 pub const Command = union(enum) {
     @"if": IfStatementInfo,
     @"for": ForStatementInfo,
-    end_for: void,
+    end_loop: void,
     // Commands in game
     move: @import("../digger/mod.zig").move.MoveDirection,
     isEdge: @import("../digger/mod.zig").check.EdgeDirection,

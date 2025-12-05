@@ -154,7 +154,7 @@ pub const CommandExecutor = struct {
                     },
                 }
             },
-            .end_for => {
+            .end_loop => {
                 if (self.loop_state.?.curr_iter_time > self.loop_state.?.total_iter) {
                     self.loop_state = null;
                     return;
