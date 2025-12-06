@@ -37,7 +37,8 @@ pub fn parse(
                 "if",
                 Command.IfStatementInfo{
                     .condition = .{ .literal = false },
-                    .num_of_cmds = 0,
+                    .then_num_cmds = 0,
+                    .else_num_cmds = 0,
                 },
                 .enum_literal,
             );

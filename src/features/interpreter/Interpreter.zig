@@ -1,5 +1,5 @@
 //! Interpreters implementation to parse the source code
-//! from `ingame/terminal` into `Action`.
+//! from `ingame/terminal` into `Command`.
 //!
 //! All functions that have `alloc` as args dont need to free
 //! because those are using `World.arena`, thats meaning all
@@ -127,6 +127,8 @@ pub const Command = union(enum) {
     @"if": IfStatementInfo,
     @"while": WhileStatementInfo,
     @"for": ForStatementInfo,
+    /// Skip number of commands in queue
+    skip: u64,
     end_loop: void,
     // Commands in game
     move: @import("../digger/mod.zig").move.MoveDirection,
@@ -243,8 +245,9 @@ pub const Command = union(enum) {
 
     pub const IfStatementInfo = struct {
         condition: CondExpr,
-        /// number of commands in the `if` body
-        num_of_cmds: u64,
+        /// Number of commands in the `if` body
+        then_num_cmds: u64,
+        else_num_cmds: u64,
 
         pub fn deinit(self: *IfStatementInfo, alloc: std.mem.Allocator) void {
             self.condition.deinit(alloc);
@@ -253,7 +256,8 @@ pub const Command = union(enum) {
         pub fn default() IfStatementInfo {
             return .{
                 .condition = undefined,
-                .num_of_cmds = 0,
+                .then_num_cmds = 0,
+                .else_num_cmds = 0,
             };
         }
     };
@@ -327,14 +331,14 @@ pub const Command = union(enum) {
         /// Example:
         /// ```
         /// arg_type = digger.MoveDirection.down
-        /// arg_value = "down" & cmd = "move"
+        /// cmd_value = "down" & cmd = "move"
         /// ```
         ///
         /// * `arg_type` == `struct` => `arg_value` should be a `struct`.
         /// Example:
         /// ```
         /// arg_type = IfStatementInfo
-        /// arg_value = IfStatementInfo {...} & cmd = "if"
+        /// cmd_value = IfStatementInfo {...} & cmd = "if"
         /// ```
         pub fn parseArg(
             self: Parser,
@@ -347,6 +351,8 @@ pub const Command = union(enum) {
             // TODO: handle more data types:
             //       + Struct
             //       + Array
+            const ReturnType = @FieldType(Command, cmd);
+
             switch (typeInfo) {
                 .@"enum" => {
                     if (@TypeOf(cmd_value) != []const u8)
@@ -362,15 +368,13 @@ pub const Command = union(enum) {
                             false,
                         );
 
-                    const T = @FieldType(Command, cmd);
-
                     return std.meta.stringToEnum(
-                        T,
+                        ReturnType,
                         cmd_value,
                     ) orelse {
                         const normalized_action_type = try utils.normalizedActionType(
                             alloc,
-                            @typeName(T),
+                            @typeName(ReturnType),
                         );
                         errdefer alloc.free(normalized_action_type);
                         try Error.expectTypeAction(
@@ -384,14 +388,21 @@ pub const Command = union(enum) {
                     };
                 },
                 .@"struct" => {
-                    const StructType = @FieldType(Command, cmd);
-                    if (@TypeOf(cmd_value) != StructType)
+                    if (@TypeOf(cmd_value) != ReturnType)
                         std.debug.panic("Expected `struct`, found `{s}`", .{
-                            @typeName(@TypeOf(StructType)),
+                            @typeName(@TypeOf(ReturnType)),
                         });
                     std.debug.assert(node_tag == .struct_init_dot or node_tag == .struct_init_dot_two);
 
-                    return @as(StructType, cmd_value);
+                    return @as(ReturnType, cmd_value);
+                },
+                .int => {
+                    if (@TypeOf(cmd_value) != ReturnType)
+                        std.debug.panic("Expected `{s}`, found `{s}`", .{
+                            @typeName(ReturnType),
+                            @typeName(@TypeOf(ReturnType)),
+                        });
+                    @as(ReturnType, @intCast(cmd_value));
                 },
                 else => unreachable, // not supported type
             }

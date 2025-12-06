@@ -87,7 +87,7 @@ fn parseMainNode(
     const body_node_idxs = ast.blockStatements(&body_node_buf, block_node_idx).?;
 
     for (body_node_idxs) |idx| {
-        try parseNode(
+        _ = try parseNode(
             alloc,
             command_parser,
             ast,
@@ -101,22 +101,25 @@ fn parseMainNode(
 
 /// Parse AST node by node index and write
 /// commands (can be **one** or **many**) to `list`
-pub fn parseNode(
+fn parseNode(
     alloc: std.mem.Allocator,
     command_parser: *Command.Parser,
     ast: Ast,
     idx: Ast.Node.Index,
     list: *std.ArrayList(Command),
-) ParseError!void {
+) ParseError!u64 {
     const node_tag = ast.nodeTag(idx);
 
-    return switch (node_tag) {
+    switch (node_tag) {
         .call_one => try parseCallNode(alloc, command_parser, ast, idx, list),
-        .if_simple => try parseIfNode(alloc, command_parser, ast, idx, list),
+        .if_simple,
+        .@"if",
+        => return parseIfNode(alloc, command_parser, ast, idx, list),
         .for_simple => try parseForNode(alloc, command_parser, ast, idx, list),
         .while_simple => try parseWhileNode(alloc, command_parser, ast, idx, list),
         else => unreachable, // unsupported node tag
-    };
+    }
+    return 0;
 }
 
 /// Parse a call node and write a command to the `list`.
@@ -145,48 +148,96 @@ fn parseCallNode(
     const optional = try command_parser.parse(alloc, fn_name, arg_value, arg_node_tag);
 
     if (optional) |cmd| {
-        list.append(alloc, cmd) catch return Command.Parser.ParseError.OutOfMemory;
+        try list.append(alloc, cmd);
     }
 }
 
 /// Parse all nodes of the `if` body and write all to
 /// the `list`.
+/// Return number of written nodes.
 fn parseIfNode(
     alloc: std.mem.Allocator,
     command_parser: *Command.Parser,
     ast: Ast,
     idx: Ast.Node.Index,
     list: *std.ArrayList(Command),
-) ParseError!void {
-    const if_statement = ast.ifSimple(idx);
+) ParseError!u64 {
+    const if_statement = ast.fullIf(idx).?;
     const cond_expr_idx = if_statement.ast.cond_expr;
-    var num_of_cmds: u64 = 0;
+    var then_num_cmds: u64 = 0;
+    var else_num_cmds: u64 = 0;
     const items_count = list.items.len;
 
-    try list.append(alloc, .{
-        .@"if" = .default(),
-    });
+    { // add the `if` command
+        try list.append(alloc, .{
+            .@"if" = .default(),
+        });
 
-    const if_cond = try parseCondExpr(alloc, command_parser, ast, cond_expr_idx, list);
-    list.items[items_count].@"if".condition = if_cond;
-
-    const semi_node_idx = if_statement.ast.then_expr;
-    var if_body_buf: [2]Ast.Node.Index = undefined;
-    const if_body_nodes = ast.blockStatements(&if_body_buf, semi_node_idx).?;
-
-    for (if_body_nodes) |i| {
-        num_of_cmds += 1;
-        // TODO: remove this assert
-        // NOTE: currently, just support call nodes in the `if` statement body
-        std.debug.assert(ast.nodeTag(i) == .call_one);
-        try parseNode(alloc, command_parser, ast, i, list);
+        const if_cond = try parseCondExpr(alloc, command_parser, ast, cond_expr_idx, list);
+        list.items[items_count].@"if".condition = if_cond;
     }
 
-    // set the value for `num_of_cmds` of the `if` command
-    list.items[items_count].@"if".num_of_cmds = num_of_cmds;
+    { // parse and get nodes in the if body
+        const if_body_nodes = get_body_nodes: {
+            const semi_node_idx = if_statement.ast.then_expr;
+            var if_body_buf: [2]Ast.Node.Index = undefined;
+            break :get_body_nodes ast.blockStatements(&if_body_buf, semi_node_idx).?;
+        };
+
+        for (if_body_nodes) |i| {
+            then_num_cmds += try parseNode(alloc, command_parser, ast, i, list);
+        }
+        // plus one for the `jump` command
+        list.items[items_count].@"if".then_num_cmds = then_num_cmds + 1;
+    }
+
+    { // parse `else` or `else if` statement
+        const items_count1 = list.items.len;
+        // add a jump command after the last command in `if` body
+        try list.append(alloc, .{
+            .skip = 0,
+        });
+
+        if (if_statement.ast.else_expr.unwrap()) |else_i| {
+            const node_tag = ast.nodeTag(else_i);
+
+            switch (node_tag) {
+                // else
+                .block_two_semicolon => else_num_cmds +=
+                    try parseBlockNode(alloc, command_parser, ast, else_i, list),
+                // else if
+                .if_simple, .@"if" => else_num_cmds +=
+                    try parseIfNode(alloc, command_parser, ast, else_i, list),
+                else => unreachable,
+            }
+            // Re-assign amount of commands to skip
+            list.items[items_count1].skip = else_num_cmds;
+        }
+    }
+
+    return then_num_cmds + else_num_cmds;
 }
 
-pub fn parseWhileNode(
+/// Parse all nodes of the `if` body and write all to
+/// the `list`. Then, return num of written nodes.
+fn parseBlockNode(
+    alloc: std.mem.Allocator,
+    command_parser: *Command.Parser,
+    ast: Ast,
+    idx: Ast.Node.Index,
+    list: *std.ArrayList(Command),
+) ParseError!u64 {
+    var written: u64 = 0;
+    var else_body_buf: [2]Ast.Node.Index = undefined;
+    const else_body__nodes = ast.blockStatements(&else_body_buf, idx).?;
+
+    for (else_body__nodes) |i| {
+        written += try parseNode(alloc, command_parser, ast, i, list);
+    }
+    return written;
+}
+
+fn parseWhileNode(
     alloc: std.mem.Allocator,
     command_parser: *Command.Parser,
     ast: Ast,
@@ -212,7 +263,7 @@ pub fn parseWhileNode(
     const while_body_nodes = ast.blockStatements(&while_body_buf, semi_node_idx).?;
 
     for (while_body_nodes) |i| {
-        try parseNode(alloc, command_parser, ast, i, list);
+        _ = try parseNode(alloc, command_parser, ast, i, list);
     }
 
     try list.append(alloc, .{ .end_loop = {} });
@@ -339,12 +390,7 @@ fn parseForNode(
     try list.append(alloc, default);
 
     const semi_node_idx = node_data[1];
-    var body_node_idxs_buf: [2]Ast.Node.Index = undefined;
-    const body_node_idxs = ast.blockStatements(&body_node_idxs_buf, semi_node_idx).?;
-
-    for (body_node_idxs) |i| {
-        try parseNode(alloc, command_parser, ast, i, list);
-    }
+    _ = try parseBlockNode(alloc, command_parser, ast, semi_node_idx, list);
 
     try list.append(alloc, .{ .end_loop = {} });
 }
@@ -435,11 +481,13 @@ test "(zig) parse command: if statement" {
     const cmds1 = try parse(alloc, &interpreter, src1);
     defer alloc.free(cmds1);
 
-    try std.testing.expectEqual(4, cmds1.len);
+    // NOTE: 4 ingame commands & 2 jump commands
+    try std.testing.expectEqual(6, cmds1.len);
     try std.testing.expectEqual(
         Command.IfStatementInfo{
             .condition = .{ .literal = true },
-            .num_of_cmds = 1,
+            .then_num_cmds = 1,
+            .else_num_cmds = 0,
         },
         cmds1[0].@"if",
     );
@@ -447,9 +495,10 @@ test "(zig) parse command: if statement" {
     try std.testing.expectEqual(
         Command.IfStatementInfo{
             .condition = .{ .literal = false },
-            .num_of_cmds = 1,
+            .then_num_cmds = 1,
+            .else_num_cmds = 0,
         },
-        cmds1[2].@"if",
+        cmds1[3].@"if",
     );
-    try std.testing.expectEqual(.down, cmds1[3].move);
+    try std.testing.expectEqual(.down, cmds1[4].move);
 }

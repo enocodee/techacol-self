@@ -123,22 +123,15 @@ pub const CommandExecutor = struct {
                 );
             },
             // NOTE: Language features
+            .skip => |value| self.curr_idx += value + 1,
             .@"if" => |info| {
                 const cond_expr_result = try self.*.evaluateCondExpr(
                     w,
                     @constCast(&info.condition),
                 );
 
-                if (!cond_expr_result.bool) {
-                    if (info.num_of_cmds <= 0) return;
-                    var idx: usize = 1;
-                    var curr_node = self.next();
-
-                    while (curr_node != null and idx < info.num_of_cmds) {
-                        curr_node = self.next();
-                        idx += 1;
-                    }
-                }
+                if (!cond_expr_result.bool)
+                    self.curr_idx += info.then_num_cmds + 1;
             },
             .@"while" => |info| {
                 const cond_expr_result = try self.*.evaluateCondExpr(
