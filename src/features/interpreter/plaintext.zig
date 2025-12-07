@@ -3,9 +3,9 @@
 const std = @import("std");
 
 const Interpreter = @import("Interpreter.zig");
+const Command = @import("command.zig").Command;
 
 const Error = Interpreter.Error;
-const Command = Interpreter.Command;
 
 pub fn parse(
     alloc: std.mem.Allocator,
@@ -35,7 +35,7 @@ pub fn parse(
             maybe_cmd = try command_parser.parse(
                 alloc,
                 "if",
-                Command.IfStatementInfo{
+                Command.info.If{
                     .condition = .{ .literal = false },
                     .then_num_cmds = 0,
                     .else_num_cmds = 0,
