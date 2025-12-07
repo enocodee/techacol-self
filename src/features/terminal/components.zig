@@ -3,8 +3,7 @@ const std = @import("std");
 const digger = @import("../digger/mod.zig");
 
 const World = @import("ecs").World;
-const Interpreter = @import("../interpreter/Interpreter.zig");
-const Command = Interpreter.Command;
+const Command = @import("../interpreter/command.zig").Command;
 
 const QueryError = @import("ecs").World.QueryError;
 
@@ -131,7 +130,7 @@ pub const CommandExecutor = struct {
                 );
 
                 if (!cond_expr_result.bool)
-                    self.curr_idx += info.then_num_cmds + 1;
+                    self.curr_idx += info.then_num_cmds;
             },
             .@"while" => |info| {
                 const cond_expr_result = try self.*.evaluateCondExpr(
@@ -184,7 +183,7 @@ pub const CommandExecutor = struct {
     fn evaluateCondExpr(
         self: *CommandExecutor,
         w: *World,
-        condition: *Interpreter.Command.CondExpr,
+        condition: *Command.CondExpr,
     ) QueryError!CondValue {
         switch (condition.*) {
             .literal => |v| return .{ .bool = v },

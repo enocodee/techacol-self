@@ -2,9 +2,9 @@ const std = @import("std");
 
 const Interpreter = @import("Interpreter.zig");
 
-const Command = Interpreter.Command;
-const CondExpr = Interpreter.Command.CondExpr;
-const ParseError = Interpreter.Command.Parser.ParseError;
+const Command = @import("command.zig").Command;
+const CondExpr = Command.CondExpr;
+const ParseError = Command.Parser.ParseError;
 const Ast = std.zig.Ast;
 
 pub fn parse(
@@ -87,7 +87,7 @@ fn parseMainNode(
     const body_node_idxs = ast.blockStatements(&body_node_buf, block_node_idx).?;
 
     for (body_node_idxs) |idx| {
-        _ = try parseNode(
+        try parseNode(
             alloc,
             command_parser,
             ast,
@@ -107,19 +107,18 @@ fn parseNode(
     ast: Ast,
     idx: Ast.Node.Index,
     list: *std.ArrayList(Command),
-) ParseError!u64 {
+) ParseError!void {
     const node_tag = ast.nodeTag(idx);
 
     switch (node_tag) {
         .call_one => try parseCallNode(alloc, command_parser, ast, idx, list),
         .if_simple,
         .@"if",
-        => return parseIfNode(alloc, command_parser, ast, idx, list),
+        => try parseIfNode(alloc, command_parser, ast, idx, list),
         .for_simple => try parseForNode(alloc, command_parser, ast, idx, list),
         .while_simple => try parseWhileNode(alloc, command_parser, ast, idx, list),
         else => unreachable, // unsupported node tag
     }
-    return 0;
 }
 
 /// Parse a call node and write a command to the `list`.
@@ -161,12 +160,10 @@ fn parseIfNode(
     ast: Ast,
     idx: Ast.Node.Index,
     list: *std.ArrayList(Command),
-) ParseError!u64 {
+) ParseError!void {
     const if_statement = ast.fullIf(idx).?;
     const cond_expr_idx = if_statement.ast.cond_expr;
-    var then_num_cmds: u64 = 0;
-    var else_num_cmds: u64 = 0;
-    const items_count = list.items.len;
+    const if_cmd_idx = list.items.len;
 
     { // add the `if` command
         try list.append(alloc, .{
@@ -174,7 +171,7 @@ fn parseIfNode(
         });
 
         const if_cond = try parseCondExpr(alloc, command_parser, ast, cond_expr_idx, list);
-        list.items[items_count].@"if".condition = if_cond;
+        list.items[if_cmd_idx].@"if".condition = if_cond;
     }
 
     { // parse and get nodes in the if body
@@ -183,16 +180,22 @@ fn parseIfNode(
             var if_body_buf: [2]Ast.Node.Index = undefined;
             break :get_body_nodes ast.blockStatements(&if_body_buf, semi_node_idx).?;
         };
+        const count1 = list.items.len;
 
         for (if_body_nodes) |i| {
-            then_num_cmds += try parseNode(alloc, command_parser, ast, i, list);
+            try parseNode(alloc, command_parser, ast, i, list);
         }
-        // plus one for the `jump` command
-        list.items[items_count].@"if".then_num_cmds = then_num_cmds + 1;
+        const count2 = list.items.len - count1;
+        if (count2 > 0) {
+            // plus one for the `jump` command
+            list.items[if_cmd_idx].@"if".then_num_cmds = count2 + 1;
+        }
     }
 
     { // parse `else` or `else if` statement
-        const items_count1 = list.items.len;
+        // We can easily to guess this count is idx of the `skip` command,
+        // since idx = count - 1, and we add the `skip` cmd after this line.
+        const count1 = list.items.len;
         // add a jump command after the last command in `if` body
         try list.append(alloc, .{
             .skip = 0,
@@ -203,19 +206,19 @@ fn parseIfNode(
 
             switch (node_tag) {
                 // else
-                .block_two_semicolon => else_num_cmds +=
-                    try parseBlockNode(alloc, command_parser, ast, else_i, list),
+                .block_two_semicolon => try parseBlockNode(alloc, command_parser, ast, else_i, list),
                 // else if
-                .if_simple, .@"if" => else_num_cmds +=
-                    try parseIfNode(alloc, command_parser, ast, else_i, list),
+                .if_simple, .@"if" => try parseIfNode(alloc, command_parser, ast, else_i, list),
                 else => unreachable,
             }
             // Re-assign amount of commands to skip
-            list.items[items_count1].skip = else_num_cmds;
+        }
+
+        const count2 = list.items.len - (count1 + 1);
+        if (count2 > 0) {
+            list.*.items[count1 - 1].skip = count2;
         }
     }
-
-    return then_num_cmds + else_num_cmds;
 }
 
 /// Parse all nodes of the `if` body and write all to
@@ -226,15 +229,13 @@ fn parseBlockNode(
     ast: Ast,
     idx: Ast.Node.Index,
     list: *std.ArrayList(Command),
-) ParseError!u64 {
-    var written: u64 = 0;
+) ParseError!void {
     var else_body_buf: [2]Ast.Node.Index = undefined;
     const else_body__nodes = ast.blockStatements(&else_body_buf, idx).?;
 
     for (else_body__nodes) |i| {
-        written += try parseNode(alloc, command_parser, ast, i, list);
+        try parseNode(alloc, command_parser, ast, i, list);
     }
-    return written;
 }
 
 fn parseWhileNode(
@@ -484,18 +485,18 @@ test "(zig) parse command: if statement" {
     // NOTE: 4 ingame commands & 2 jump commands
     try std.testing.expectEqual(6, cmds1.len);
     try std.testing.expectEqual(
-        Command.IfStatementInfo{
+        Command.info.If{
             .condition = .{ .literal = true },
-            .then_num_cmds = 1,
+            .then_num_cmds = 2,
             .else_num_cmds = 0,
         },
         cmds1[0].@"if",
     );
     try std.testing.expectEqual(.down, cmds1[1].move);
     try std.testing.expectEqual(
-        Command.IfStatementInfo{
+        Command.info.If{
             .condition = .{ .literal = false },
-            .then_num_cmds = 1,
+            .then_num_cmds = 2,
             .else_num_cmds = 0,
         },
         cmds1[3].@"if",
