@@ -1,0 +1,4 @@
+<extend template="base.shtml">
+<body id="body">
+	<h1>TODO</h1>
+</body>
