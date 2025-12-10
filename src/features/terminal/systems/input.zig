@@ -3,10 +3,12 @@ const rl = @import("raylib");
 const digger = @import("../../digger/mod.zig");
 const utils = @import("../utils.zig");
 
-const Terminal = @import("../components.zig").Terminal;
+const Terminal = @import("../mod.zig").Terminal;
+const Buffer = @import("../mod.zig").Buffer;
 const Executor = @import("../../command_executor/mod.zig").CommandExecutor;
 const Interpreter = @import("../../interpreter/Interpreter.zig");
 const World = @import("ecs").World;
+const Grid = @import("ecs").common.Grid;
 
 /// Running all available cmds in queue
 pub fn execCmds(w: *World, _: std.mem.Allocator) !void {
@@ -14,61 +16,41 @@ pub fn execCmds(w: *World, _: std.mem.Allocator) !void {
     try executor.execNext(w, 1000);
 }
 
-pub fn scan(
-    out: []u8,
-    width: i32,
-    count: *i32,
-    max_length: i32,
+pub fn handleKeys(
+    alloc: std.mem.Allocator,
+    buf: *Buffer,
     ts_backspace: *i64,
 ) !void {
-    var keyInt = rl.getCharPressed();
+    _ = ts_backspace;
+    if (try handleTyping(alloc, buf)) return;
 
-    while (keyInt != 0) : (keyInt = rl.getCharPressed()) {
+    // TODO: handle key combination and key holding
+    const pressed = rl.getKeyPressed();
+    if (pressed != .null) {
+        switch (pressed) {
+            .backspace => try buf.remove(alloc),
+            .enter => try buf.newLine(alloc),
+            .left => buf.seek(.left),
+            .right => buf.seek(.right),
+            .up => buf.seek(.up),
+            .down => buf.seek(.down),
+            else => {},
+        }
+    }
+}
+
+/// Return `true` if typing
+pub fn handleTyping(alloc: std.mem.Allocator, buf: *Buffer) !bool {
+    var key_int = rl.getCharPressed();
+
+    while (key_int != 0) : (key_int = rl.getCharPressed()) {
         // allow range 32..127 chars in unicode
-        if ((keyInt >= 32) and (keyInt < 127) and count.* < max_length) {
-            count.* += 1;
-            out[@intCast(count.* - 1)] = @intCast(keyInt);
+        if (key_int >= 32 and key_int < 127) {
+            try buf.insert(alloc, @as(u8, @intCast(key_int)));
         }
     }
 
-    // handle key holding
-    if ((std.time.microTimestamp() - ts_backspace.*) > @divTrunc(1000000, 10)) // 0.1s
-    {
-        if (rl.isKeyDown(.backspace) and
-            (count.* > 0))
-        {
-            const count_v = count.*;
-            // NOTE: remove the space of `ENTER`
-            const count_zero = utils.skipChar(out[0..@intCast(count_v)], &[_]u8{0});
-            var count_cr = utils.skipChar(out[0..@intCast(count_v - count_zero)], "\r\n");
-
-            const total = count_zero + count_cr;
-
-            ts_backspace.* = std.time.microTimestamp();
-            count.* -= blk: {
-                if (count_zero != 0 or count_cr != 0) {
-                    break :blk total;
-                } else {
-                    break :blk 1;
-                }
-            };
-            if (count_cr > 0) {
-                while (count_cr > 0) : (count_cr -= 1) {
-                    out[@intCast(count_v - count_zero)] = 0;
-                }
-            } else {
-                out[@intCast(count.*)] = 0;
-            }
-        }
-
-        if (rl.isKeyDown(.enter)) {
-            ts_backspace.* = std.time.microTimestamp();
-            const remaning_to_new_line = width - @mod(count.*, width);
-            out[@intCast(count.*)] = '\r';
-            out[@intCast(count.* + 1)] = '\n';
-            count.* += remaning_to_new_line;
-        }
-    }
+    return key_int != 0;
 }
 
 pub fn process(
