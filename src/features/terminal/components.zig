@@ -93,6 +93,7 @@ pub const Buffer = struct {
             state.*.frame_counter = 0;
         }
 
+        // TODO: handling over-horizontal
         const real_pos = grid.matrix[
             try grid.getActualIndex(
                 @intCast(self.cursor.row),
@@ -145,36 +146,59 @@ pub const Buffer = struct {
     }
 
     /// Remove a character at current cursor position and **shift left
-    /// the cursor**. If the cursor at the **first column**, it will move to
-    /// the next character of the last character in the previous line.
+    /// the cursor**.
+    /// If the cursor at the **first column**, it will move to the
+    /// next character of the last character and move all characters
+    /// after the cursor to the previous line.
     ///
     /// Asserts that the current line equals or less than the total line
     pub fn remove(self: *Buffer, alloc: std.mem.Allocator) !void {
         std.debug.assert(self.cursor.row <= self.total_line);
         if (self.cursor.row == 0 and self.lines.items[self.cursor.row].items.len == 0) return;
 
+        const curr_line = &self.lines.items[self.cursor.row];
         if (self.cursor.col <= 0) {
-            self.seek(.up);
-
-            if (self.lines.items[self.cursor.row].items.len > 0) {
-                const num_char_of_prev = self.lines.items[self.cursor.row].items.len;
+            if (curr_line.*.items.len > 0) {
+                const num_char_of_prev = curr_line.*.items.len;
                 self.cursor.col = num_char_of_prev;
             } else {
                 self.cursor.col = 0;
             }
 
             var line = self.lines.pop().?;
-            line.deinit(alloc);
+            defer line.deinit(alloc);
+
+            self.seek(.up);
             self.total_line -= 1;
+            if (line.items.len > 0) {
+                try self
+                    .lines
+                    .items[self.cursor.row]
+                    .appendSlice(alloc, line.items);
+            }
         } else {
-            _ = self.lines.items[self.cursor.row].orderedRemove(self.cursor.col - 1);
+            _ = curr_line.*.orderedRemove(self.cursor.col - 1);
             self.seek(.left);
         }
     }
 
-    /// Add and move to the new line.
+    /// Add and move to the new line. If there are
+    /// any characters from the cursor position, all
+    /// will be moved to the new line.
     pub fn newLine(self: *Buffer, alloc: std.mem.Allocator) !void {
-        try self.lines.append(alloc, .empty);
+        const curr_line = &self.lines.items[self.cursor.row];
+
+        if (self.cursor.col < curr_line.*.items.len - 1) {
+            const rest = curr_line.items[self.cursor.col..curr_line.items.len];
+            try self.lines.append(
+                alloc,
+                .fromOwnedSlice(try alloc.dupe(u8, rest)),
+            );
+            try curr_line.replaceRange(alloc, self.cursor.col, rest.len, &.{});
+        } else {
+            try self.lines.append(alloc, .empty);
+        }
+
         self.total_line += 1;
         self.cursor.row = self.lines.items.len - 1;
         self.cursor.col = 0;
