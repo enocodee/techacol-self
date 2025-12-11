@@ -188,7 +188,7 @@ pub const Buffer = struct {
     pub fn newLine(self: *Buffer, alloc: std.mem.Allocator) !void {
         const curr_line = &self.lines.items[self.cursor.row];
 
-        if (self.cursor.col < curr_line.*.items.len - 1) {
+        if (curr_line.*.items.len > 0 and self.cursor.col < curr_line.*.items.len - 1) {
             const rest = curr_line.items[self.cursor.col..curr_line.items.len];
             try self.lines.append(
                 alloc,
