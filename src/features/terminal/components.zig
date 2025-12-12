@@ -22,7 +22,7 @@ pub const Buffer = struct {
         row: usize = 0,
         col: usize = 0,
     } = .{},
-    total_line: usize = 0,
+    total_line: usize = 1,
 
     const Lines = std.ArrayList(std.ArrayList(u8));
 
@@ -121,7 +121,7 @@ pub const Buffer = struct {
         return list.toOwnedSlice(alloc);
     }
 
-    /// Append a character to the current line and shift right the cursor.
+    /// Append a character to the cursor position and **right-shift** the cursor.
     ///
     /// Asserts that the current line equals or less than the total line.
     pub fn insert(self: *Buffer, alloc: std.mem.Allocator, char: u8) !void {
@@ -133,43 +133,43 @@ pub const Buffer = struct {
         if (curr_idx == curr_line.*.items.len) { // at the last col
             try curr_line.append(alloc, char);
         } else { // at a random index which is not the last col
-            try curr_line.ensureTotalCapacity(alloc, curr_line.items.len + 1);
-            curr_line.items.len += 1;
-            @memmove(
-                curr_line.items[curr_idx + 1 .. curr_line.items.len],
-                curr_line.items[curr_idx .. curr_line.items.len - 1],
-            );
-
-            curr_line.items[curr_idx] = char;
+            try utils.insertAndShiftMemory(alloc, u8, curr_line, curr_idx, char);
         }
         self.seek(.right);
     }
 
-    /// Remove a character at current cursor position and **shift left
-    /// the cursor**.
+    /// Remove a character at the cursor position and **left-shift
+    /// the cursor** if .
+    ///
     /// If the cursor at the **first column**, it will move to the
-    /// next character of the last character and move all characters
-    /// after the cursor to the previous line.
+    /// next character in the last character and move all characters
+    /// after the cursor back to the previous line and remove the
+    /// current line. Otherwise, the cursor will move left.
     ///
     /// Asserts that the current line equals or less than the total line
     pub fn remove(self: *Buffer, alloc: std.mem.Allocator) !void {
         std.debug.assert(self.cursor.row <= self.total_line);
-        if (self.cursor.row == 0 and self.lines.items[self.cursor.row].items.len == 0) return;
-
         const curr_line = &self.lines.items[self.cursor.row];
+        // nothing to remove
+        if (self.cursor.row == 0 and curr_line.items.len == 0) return;
+        // at the first column and first row
+        if (self.cursor.row == 0 and self.cursor.col == 0) return;
+
         if (self.cursor.col <= 0) {
-            if (curr_line.*.items.len > 0) {
-                const num_char_of_prev = curr_line.*.items.len;
+            const prev_line = self.lines.items[self.cursor.row - 1];
+
+            if (prev_line.items.len > 0) {
+                const num_char_of_prev = prev_line.items.len;
                 self.cursor.col = num_char_of_prev;
             } else {
                 self.cursor.col = 0;
             }
 
-            var line = self.lines.pop().?;
+            var line = self.lines.orderedRemove(self.cursor.row);
             defer line.deinit(alloc);
-
             self.seek(.up);
             self.total_line -= 1;
+
             if (line.items.len > 0) {
                 try self
                     .lines
@@ -177,30 +177,52 @@ pub const Buffer = struct {
                     .appendSlice(alloc, line.items);
             }
         } else {
-            _ = curr_line.*.orderedRemove(self.cursor.col - 1);
+            _ = curr_line.orderedRemove(self.cursor.col - 1);
             self.seek(.left);
         }
     }
 
-    /// Add and move to the new line. If there are
-    /// any characters from the cursor position, all
+    /// Add and move to the new line.
+    ///
+    /// * If there are any characters after the cursor position, all
     /// will be moved to the new line.
+    /// * If the current line is not the last line, all lines after the
+    /// current line will shift to the right in `lines`.
     pub fn newLine(self: *Buffer, alloc: std.mem.Allocator) !void {
         const curr_line = &self.lines.items[self.cursor.row];
 
-        if (curr_line.*.items.len > 0 and self.cursor.col < curr_line.*.items.len - 1) {
-            const rest = curr_line.items[self.cursor.col..curr_line.items.len];
-            try self.lines.append(
-                alloc,
-                .fromOwnedSlice(try alloc.dupe(u8, rest)),
+        var chars: []u8 = "";
+        if (curr_line.*.items.len > 0 and self.cursor.col <= curr_line.*.items.len - 1) {
+            const after_i = try alloc.dupe(
+                u8,
+                curr_line.items[self.cursor.col..curr_line.items.len],
             );
-            try curr_line.replaceRange(alloc, self.cursor.col, rest.len, &.{});
+            try curr_line.replaceRange(alloc, self.cursor.col, after_i.len, &.{});
+            chars = after_i;
+        }
+
+        const new_line: std.ArrayList(u8) = create_new_line: {
+            if (chars.len > 0) {
+                break :create_new_line .fromOwnedSlice(chars);
+            } else {
+                break :create_new_line .empty;
+            }
+        };
+
+        if (self.cursor.row != self.total_line - 1) {
+            try utils.insertAndShiftMemory(
+                alloc,
+                std.ArrayList(u8),
+                &self.lines,
+                self.cursor.row + 1,
+                new_line,
+            );
         } else {
-            try self.lines.append(alloc, .empty);
+            try self.lines.append(alloc, new_line);
         }
 
         self.total_line += 1;
-        self.cursor.row = self.lines.items.len - 1;
+        self.cursor.row += 1;
         self.cursor.col = 0;
     }
 
