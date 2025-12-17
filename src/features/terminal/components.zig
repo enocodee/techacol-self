@@ -4,15 +4,31 @@ const rl = @import("raylib");
 const digger = @import("../digger/mod.zig");
 const utils = @import("utils.zig");
 
+const ecs_common = @import("ecs").common;
 const World = @import("ecs").World;
-const Grid = @import("ecs").common.Grid;
+const Grid = ecs_common.Grid;
 const Command = @import("../interpreter/command.zig").Command;
 const State = @import("resources.zig").State;
 const Style = @import("resources.zig").Style;
 
 const QueryError = @import("ecs").World.QueryError;
 
+pub const TerminalBundle = struct {
+    term: Terminal = .{},
+    pos: ecs_common.Position,
+    rec: ecs_common.Rectangle,
+    buffer: BufferBundle,
+    run_btn: ecs_common.ButtonBundle,
+    executor: @import("../command_executor/mod.zig").CommandExecutor,
+};
+
 pub const Terminal = struct {};
+
+pub const BufferBundle = struct {
+    buf: Buffer,
+    // TODO: i think this should be calculated automatically
+    grid: Grid,
+};
 
 pub const Buffer = struct {
     // TODO: enhance the way to store `lines`

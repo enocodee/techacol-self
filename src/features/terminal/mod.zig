@@ -7,6 +7,7 @@ const components = @import("components.zig");
 
 const World = @import("ecs").World;
 const Button = ecs_common.Button;
+const ButtonBundle = ecs_common.ButtonBundle;
 const Rectangle = ecs_common.Rectangle;
 const Position = ecs_common.Position;
 const Grid = ecs_common.Grid;
@@ -15,6 +16,9 @@ const Style = resources.Style;
 
 const GameAssets = @import("../../GameAssets.zig");
 const Executor = @import("../command_executor/mod.zig").CommandExecutor;
+
+const TerminalBundle = components.TerminalBundle;
+const BufferBundle = components.BufferBundle;
 
 pub const Buffer = components.Buffer;
 pub const Terminal = components.Terminal;
@@ -50,38 +54,30 @@ pub fn spawn(w: *World, _: std.mem.Allocator) !void {
     const font_x: i32 = @intFromFloat(measure_font.x);
     const font_y: i32 = @intFromFloat(measure_font.y);
 
+    var grid: Grid = .{
+        .num_of_rows = 16,
+        .num_of_cols = 25,
+        .cell_gap = 2,
+        .color = .red,
+        .cell_width = font_x,
+        .cell_height = font_y,
+        .render_mode = .none,
+    };
+    grid.initCells(w.alloc, 5 + rl.getScreenWidth() - 300, 15);
+
     // spawn the terminal background
     w.spawnEntity(.{
-        Terminal{},
-        try Buffer.init(w.alloc),
-        Position{ .x = rl.getScreenWidth() - 300, .y = 10 },
-        Rectangle{ .width = 250, .height = 350, .color = .black },
-        Grid.init(
-            w.alloc,
-            5 + rl.getScreenWidth() - 300, // x
-            15, // y
-            // TODO: remove fixed values
-            16, // rows
-            25, // cols
-            font_x, // width
-            font_y, // height
-            .red,
-            2, // gap
-            .line,
-        ),
-    });
-
-    // spawn RUN button
-    w.spawnEntity(.{
-        Terminal{},
-        Button{ .content = "Run", .font = style.font },
-        Position{ .x = (rl.getScreenWidth() - 300), .y = 360 },
-        Rectangle{ .width = 100, .height = 50, .color = .gray },
-    });
-
-    // the command executor
-    w.spawnEntity(.{
-        Terminal{},
-        Executor.init(w.alloc),
+        TerminalBundle{
+            // TODO: handle conflicts between run_btn's components
+            //       and terminal's components (rec & pos)
+            .pos = .{ .x = rl.getScreenWidth() - 300, .y = 10 },
+            .rec = .{ .height = 360, .width = 300, .color = .black },
+            .buffer = .{ .buf = try Buffer.init(w.alloc), .grid = grid },
+            .run_btn = .{
+                .btn = .{ .content = "Run", .font = style.font },
+                .pos = .{ .x = (rl.getScreenWidth() - 300), .y = 360 },
+            },
+            .executor = Executor.init(w.alloc),
+        },
     });
 }

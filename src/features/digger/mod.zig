@@ -8,6 +8,7 @@ const InGrid = ecs_common.InGrid;
 const World = @import("ecs").World;
 
 const Area = @import("../area/components.zig").Area;
+const DiggerBundle = @import("components.zig").DiggerBundle;
 
 pub const Digger = @import("components.zig").Digger;
 
@@ -23,13 +24,12 @@ pub fn build(w: *World) void {
 }
 
 pub fn spawn(w: *World, _: std.mem.Allocator) !void {
-    w.spawnEntity(
-        .{
-            Digger{ .idx_in_grid = .{ .r = 0, .c = 0 } },
-            Circle{ .radius = 10, .color = .red },
-            Position{ .x = 0, .y = 0 },
+    w.spawnEntity(.{
+        DiggerBundle{
+            .digger = .{ .idx_in_grid = .{ .r = 0, .c = 0 } },
+            .shape = .{ .circle = .{ .radius = 10, .color = .red }, .pos = .{ .x = 0, .y = 0 } },
             // TODO: grid entity should be `null` when initialized
-            InGrid{ .grid_entity = 0 },
+            .in_grid = .{ .grid_entity = 0 },
         },
-    );
+    });
 }
