@@ -18,6 +18,9 @@ pub const InGrid = grid.InGrid;
 pub const Button = button.Button;
 pub const Circle = circle.Circle;
 
+pub const ButtonBundle = button.Bundle;
+pub const CircleBundle = circle.Bundle;
+
 pub const CommonModule = struct {
     pub fn build(w: *World) void {
         _ = w.addSystems(.update, &.{

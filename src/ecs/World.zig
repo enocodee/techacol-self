@@ -109,17 +109,51 @@ pub fn newEntity(self: *World) EntityID {
     return id;
 }
 
+/// If an component has the suffix `Bundle` at the end of its name,
+/// it will be treated as a bundle.
 pub fn spawnEntity(
     self: *World,
     values: anytype,
 ) void {
-    if (@typeInfo(@TypeOf(values)) != .@"struct")
+    const type_info = @typeInfo(@TypeOf(values));
+    if (type_info != .@"struct")
         @compileError("Expected a tuple or struct, found " ++ @typeName(@TypeOf(values)));
-
     const id = self.newEntity();
 
-    inline for (values) |v| {
-        try self.setComponent(id, @TypeOf(v), v);
+    const fields = type_info.@"struct".fields;
+    inline for (fields) |f| {
+        try self.extractComponent(id, f.type, @field(values, f.name));
+    }
+}
+
+fn extractComponent(
+    self: *World,
+    id: EntityID,
+    comptime T: type,
+    comp: T,
+) !void {
+    const ComponentType = @TypeOf(comp);
+
+    if (comptime std.mem.endsWith(u8, @typeName(ComponentType), "Bundle")) {
+        std.log.debug("extract bundle {s}", .{@typeName(ComponentType)});
+        try self.extractBundleComponent(id, T, comp);
+    } else {
+        try self.setComponent(id, ComponentType, comp);
+    }
+}
+
+fn extractBundleComponent(
+    self: *World,
+    id: EntityID,
+    comptime T: type,
+    bundle: T,
+) !void {
+    if (@typeInfo(@TypeOf(bundle)) != .@"struct")
+        @panic("Expected a tuple or struct for a bundle, found " ++ @typeName(@TypeOf(bundle)));
+
+    const comps = @typeInfo(@TypeOf(bundle)).@"struct".fields;
+    inline for (comps) |f| {
+        try self.extractComponent(id, f.type, @field(bundle, f.name));
     }
 }
 

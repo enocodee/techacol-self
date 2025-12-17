@@ -1,5 +1,6 @@
 const std = @import("std");
 const rl = @import("raylib");
+const common = @import("../../common.zig");
 
 /// Because we spawn a grid as an entity so another entities
 /// need which grid they are in via `InGrid`.
@@ -27,7 +28,7 @@ pub const InGrid = struct { grid_entity: @import("../../World.zig").EntityID };
 // Grid should only draw lines, not block
 // references to component hierarchy in `Bevy` if want to draw blocks
 pub const Grid = struct {
-    matrix: []Cell,
+    matrix: []Cell = &.{},
     num_of_cols: i32,
     num_of_rows: i32,
     cell_width: i32,
@@ -55,8 +56,10 @@ pub const Grid = struct {
         y: i32,
     };
 
-    /// Create a grid (1 dimension array) with `num_of_rows` * `num_of_cols` cells.
-    /// Each `cell` is a square.
+    /// Init `num_of_rows` * `num_of_cols` cells.
+    /// Each `cell` is a rectangle.
+    /// This function should be called after the grid object is initialized to
+    /// init its cells.
     ///
     /// If you wonder why I choose 1-dimension and not n-dimension. The anwser is that
     /// Im avoiding allocating more times and managing more array ptr.
@@ -66,40 +69,24 @@ pub const Grid = struct {
     /// `|-| gap |-| gap |-|`
     /// `|7| <-> |8| <-> |9|`
     /// `|-| <-> |-| <-> |-|`
-    pub fn init(
+    pub fn initCells(
+        self: *Grid,
         alloc: std.mem.Allocator,
         pos_start_x: i32,
         pos_start_y: i32,
-        num_of_rows: i32,
-        num_of_cols: i32,
-        cell_width: i32,
-        cell_height: i32,
-        color: rl.Color,
-        // the space between cells
-        cell_gap: i32,
-        render_mode: RenderMode,
-    ) Grid {
-        const matrix = alloc.alloc(Cell, @intCast(num_of_rows * num_of_cols)) catch @panic("OOM");
+    ) void {
+        const matrix = alloc.alloc(Cell, @intCast(self.num_of_rows * self.num_of_cols)) catch @panic("OOM");
 
-        for (0..@intCast(num_of_rows)) |r| {
-            for (0..@intCast(num_of_cols)) |c| {
-                matrix[c + r * @as(u32, @intCast(num_of_cols))] = .{
-                    .x = pos_start_x + @as(i32, @intCast((c))) * (cell_width + cell_gap),
-                    .y = pos_start_y + @as(i32, @intCast((r))) * (cell_height + cell_gap),
+        for (0..@intCast(self.num_of_rows)) |r| {
+            for (0..@intCast(self.num_of_cols)) |c| {
+                matrix[c + r * @as(u32, @intCast(self.num_of_cols))] = .{
+                    .x = pos_start_x + @as(i32, @intCast((c))) * (self.cell_width + self.cell_gap),
+                    .y = pos_start_y + @as(i32, @intCast((r))) * (self.cell_height + self.cell_gap),
                 };
             }
         }
 
-        return .{
-            .matrix = matrix,
-            .num_of_rows = num_of_rows,
-            .num_of_cols = num_of_cols,
-            .cell_width = cell_width,
-            .cell_height = cell_height,
-            .color = color,
-            .cell_gap = cell_gap,
-            .render_mode = render_mode,
-        };
+        self.matrix = matrix;
     }
 
     pub fn deinit(self: *Grid, alloc: std.mem.Allocator) void {
