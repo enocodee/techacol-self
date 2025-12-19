@@ -24,7 +24,7 @@ pub fn build(w: *World) void {
 }
 
 pub fn spawn(w: *World, _: std.mem.Allocator) !void {
-    w.spawnEntity(.{
+    _ = w.spawnEntity(.{
         DiggerBundle{
             .digger = .{ .idx_in_grid = .{ .r = 0, .c = 0 } },
             .shape = .{ .circle = .{ .radius = 10, .color = .red }, .pos = .{ .x = 0, .y = 0 } },

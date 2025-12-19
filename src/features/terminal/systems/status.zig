@@ -4,6 +4,7 @@ const resource = @import("../resources.zig");
 const ecs_common = @import("ecs").common;
 const input = @import("input.zig");
 
+const Children = @import("ecs").common.Children;
 const World = @import("ecs").World;
 const Terminal = @import("../mod.zig").Terminal;
 const Buffer = @import("../mod.zig").Buffer;
@@ -64,7 +65,16 @@ pub fn inFocused(w: *World, _: std.mem.Allocator) !void {
 
 pub fn inClickedRun(w: *World, _: std.mem.Allocator) !void {
     const state = try w.getResource(State);
-    const pos, const rec, _, _ = (try w.query(&.{ Position, Rectangle, Button, Terminal }))[0];
+    const child = (try w.query(&.{
+        @import("ecs").common.Children,
+        Terminal,
+    }))[0][0];
+    // TODO: handle query children components
+    const rec, const pos =
+        (try w
+            .entity(child.id)
+            .getComponents(&.{ Rectangle, Position }));
+
     const buf, _ = (try w.query(&.{ Buffer, Terminal }))[0];
 
     if (rl.checkCollisionPointRec(
@@ -93,7 +103,8 @@ pub fn inClickedRun(w: *World, _: std.mem.Allocator) !void {
 pub fn inCmdRunning(w: *World, _: std.mem.Allocator) !void {
     const state = try w.getMutResource(State);
     const executor = (try w.query(&.{ Executor, Terminal }))[0][0];
-    const run_btn = (try w.query(&.{ *Button, Terminal }))[0][0];
+    const child = (try w.query(&.{ Children, Terminal }))[0][0];
+    const run_btn = (try w.entity(child.id).getComponents(&.{*Button}))[0];
 
     state.*.active = !executor.is_running;
     if (state.active) {

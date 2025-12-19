@@ -18,7 +18,7 @@ pub fn build(w: *World) void {
 }
 
 pub fn spawn(w: *World, _: std.mem.Allocator) !void {
-    w.spawnEntity(
+    _ = w.spawnEntity(
         .{
             Info{},
             Box{

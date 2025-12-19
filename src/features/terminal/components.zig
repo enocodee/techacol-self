@@ -18,7 +18,6 @@ pub const TerminalBundle = struct {
     pos: ecs_common.Position,
     rec: ecs_common.Rectangle,
     buffer: BufferBundle,
-    run_btn: ecs_common.ButtonBundle,
     executor: @import("../command_executor/mod.zig").CommandExecutor,
 };
 

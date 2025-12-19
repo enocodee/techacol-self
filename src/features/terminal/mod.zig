@@ -65,19 +65,22 @@ pub fn spawn(w: *World, _: std.mem.Allocator) !void {
     };
     grid.initCells(w.alloc, 5 + rl.getScreenWidth() - 300, 15);
 
-    // spawn the terminal background
-    w.spawnEntity(.{
+    _ = try w.spawnEntity(.{
         TerminalBundle{
-            // TODO: handle conflicts between run_btn's components
-            //       and terminal's components (rec & pos)
             .pos = .{ .x = rl.getScreenWidth() - 300, .y = 10 },
             .rec = .{ .height = 360, .width = 300, .color = .black },
             .buffer = .{ .buf = try Buffer.init(w.alloc), .grid = grid },
-            .run_btn = .{
-                .btn = .{ .content = "Run", .font = style.font },
-                .pos = .{ .x = (rl.getScreenWidth() - 300), .y = 360 },
-            },
             .executor = Executor.init(w.alloc),
         },
-    });
+    }).withChildren(struct {
+        pub fn cb(parent: @import("ecs").Entity) !void {
+            const s = try parent.world.getResource(Style);
+
+            _ = parent.spawn(ButtonBundle{
+                .btn = .{ .content = "Run", .font = s.font },
+                .pos = .{ .x = (rl.getScreenWidth() - 300), .y = 370 },
+                .rec = .{ .width = 100, .height = 50, .color = .gray },
+            });
+        }
+    }.cb);
 }

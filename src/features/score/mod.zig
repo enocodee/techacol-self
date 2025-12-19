@@ -28,7 +28,7 @@ pub fn build(w: *World) void {
 
 pub fn spawn(w: *World, _: std.mem.Allocator) !void {
     const grid = try w.getComponent(0, Grid);
-    w.spawnEntity(.{
+    _ = w.spawnEntity(.{
         Position{},
         try Point.random(grid.num_of_cols, grid.num_of_rows),
         Circle{ .radius = 5, .color = .yellow },

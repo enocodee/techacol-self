@@ -24,5 +24,5 @@ pub fn spawn(w: *World, _: std.mem.Allocator) !void {
     };
     grid.initCells(w.alloc, 0, 0);
 
-    w.spawnEntity(.{ Area{}, grid });
+    _ = w.spawnEntity(.{ Area{}, grid });
 }
