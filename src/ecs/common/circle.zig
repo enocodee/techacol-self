@@ -6,6 +6,11 @@ const Position = @import("position.zig").Position;
 
 const queryToRender = @import("utils.zig").queryToRender;
 
+pub const Bundle = struct {
+    circle: Circle,
+    pos: Position,
+};
+
 pub const Circle = struct {
     radius: i32,
     color: rl.Color,

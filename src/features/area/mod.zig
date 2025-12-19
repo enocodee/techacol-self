@@ -13,19 +13,16 @@ pub fn build(w: *World) void {
 }
 
 pub fn spawn(w: *World, _: std.mem.Allocator) !void {
-    w.spawnEntity(
-        &.{ Area, Grid },
-        .{ .{}, .init(
-            w.alloc,
-            0,
-            0,
-            3,
-            3,
-            100,
-            100,
-            .blue,
-            5,
-            .block,
-        ) },
-    );
+    var grid: Grid = .{
+        .cell_height = 100,
+        .cell_width = 100,
+        .num_of_cols = 3,
+        .num_of_rows = 3,
+        .cell_gap = 5,
+        .color = .blue,
+        .render_mode = .block,
+    };
+    grid.initCells(w.alloc, 0, 0);
+
+    _ = w.spawnEntity(.{ Area{}, grid });
 }

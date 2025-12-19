@@ -7,6 +7,12 @@ const Rectangle = @import("rectangle.zig").Rectangle;
 
 const queryToRender = @import("utils.zig").queryToRender;
 
+pub const Bundle = struct {
+    btn: Button,
+    rec: Rectangle,
+    pos: Position,
+};
+
 pub const Button = struct {
     content: [:0]const u8,
     font: rl.Font,
