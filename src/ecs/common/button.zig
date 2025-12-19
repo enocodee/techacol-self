@@ -9,6 +9,7 @@ const queryToRender = @import("utils.zig").queryToRender;
 
 pub const Bundle = struct {
     btn: Button,
+    rec: Rectangle,
     pos: Position,
 };
 
