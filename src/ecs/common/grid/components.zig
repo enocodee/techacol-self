@@ -4,7 +4,7 @@ const common = @import("../../common.zig");
 
 /// Because we spawn a grid as an entity so another entities
 /// need which grid they are in via `InGrid`.
-pub const InGrid = struct { grid_entity: @import("../../World.zig").EntityID };
+pub const InGrid = struct { grid_entity: @import("../../Entity.zig").ID };
 
 /// # Examples:
 /// * rows = 3, cols = 3
@@ -142,7 +142,16 @@ pub const Grid = struct {
 
     test "get actual position in the grid" {
         const alloc = std.testing.allocator;
-        var grid = Grid.init(alloc, 0, 0, 3, 3, 1, 1, .blank, 1, .none);
+        var grid: Grid = .{
+            .num_of_rows = 3,
+            .num_of_cols = 3,
+            .cell_height = 1,
+            .cell_width = 1,
+            .cell_gap = 1,
+            .color = .blank,
+            .render_mode = .none,
+        };
+        grid.initCells(alloc, 0, 0);
         defer grid.deinit(alloc);
 
         const pos1 = try grid.getActualIndex(0, 0);
@@ -163,7 +172,16 @@ pub const Grid = struct {
         try std.testing.expectError(Error.OverNumCol, grid.getActualIndex(0, 4));
         try std.testing.expectError(Error.OverNumRow, grid.getActualIndex(4, 0));
 
-        var grid2 = Grid.init(alloc, 0, 0, 2, 3, 2, 2, .blank, 1, .none);
+        var grid2: Grid = .{
+            .num_of_cols = 3,
+            .num_of_rows = 2,
+            .cell_height = 2,
+            .cell_width = 2,
+            .cell_gap = 1,
+            .color = .blank,
+            .render_mode = .none,
+        };
+        grid2.initCells(alloc, 0, 0);
         defer grid2.deinit(alloc);
 
         const pos4 = try grid2.getActualIndex(0, 2);

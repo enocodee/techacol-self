@@ -1,7 +1,7 @@
 const std = @import("std");
-const World = @import("World.zig");
 const ecs_util = @import("util.zig");
-const EntityID = World.EntityID;
+const World = @import("World.zig");
+const EntityID = @import("Entity.zig").ID;
 
 pub fn Storage(comptime T: type) type {
     return struct {
