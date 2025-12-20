@@ -11,7 +11,7 @@ const World = @import("ecs").World;
 const Grid = @import("ecs").common.Grid;
 
 /// Running all available cmds in queue
-pub fn execCmds(w: *World, _: std.mem.Allocator) !void {
+pub fn execCmds(w: *World) !void {
     const executor = (try w.query(&.{ *Executor, Terminal }))[0][0];
     try executor.execNext(w, 1000);
 }

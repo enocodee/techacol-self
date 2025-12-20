@@ -9,10 +9,10 @@ const Area = @import("components.zig").Area;
 pub fn build(w: *World) void {
     _ = w
         .addSystem(.startup, spawn)
-        .addSystems(.update, &.{systems.render});
+        .addSystems(.update, .{systems.render});
 }
 
-pub fn spawn(w: *World, _: std.mem.Allocator) !void {
+pub fn spawn(w: *World, alloc: std.mem.Allocator) !void {
     var grid: Grid = .{
         .cell_height = 100,
         .cell_width = 100,
@@ -22,7 +22,7 @@ pub fn spawn(w: *World, _: std.mem.Allocator) !void {
         .color = .blue,
         .render_mode = .block,
     };
-    grid.initCells(w.alloc, 0, 0);
+    grid.initCells(alloc, 0, 0);
 
     _ = w.spawnEntity(.{ Area{}, grid });
 }

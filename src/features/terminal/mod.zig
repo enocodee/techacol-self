@@ -31,7 +31,7 @@ pub fn build(w: *World) void {
         .addResource(Style, .{ .font = font, .font_size = 20 })
         .addResource(State, .{})
         .addSystem(.startup, spawn)
-        .addSystems(.update, &.{
+        .addSystems(.update, .{
         systems.input.execCmds,
         systems.status.inHover,
         systems.status.inWindowResizing,
@@ -42,7 +42,7 @@ pub fn build(w: *World) void {
     });
 }
 
-pub fn spawn(w: *World, _: std.mem.Allocator) !void {
+pub fn spawn(w: *World) !void {
     const style = try w.getResource(Style);
     const measure_font = rl.measureTextEx(
         style.font,

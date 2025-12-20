@@ -14,29 +14,15 @@ const resource = @import("resource.zig");
 const ecs_util = @import("util.zig");
 const ecs_common = @import("common.zig");
 const query_helper = @import("query_helper.zig");
+const system = @import("system.zig");
 
 const ErasedComponentStorage = component.ErasedStorage;
 const ComponentStorage = component.Storage;
 const ErasedResourceType = resource.ErasedResource;
 const Entity = @import("Entity.zig");
+const System = system.System;
 
 const World = @This();
-
-pub const System = struct {
-    @"fn": Fn,
-    order: ExecOrder,
-
-    // TODO: make all args optional? I think the idea same with the dependency injection
-    //      ex: aRandomSystemFn() -> fetch nothing
-    //          aRandomSystemFn(allocator) -> just fetch allocator
-    //          aRandomSystemFn(allocator, query_result) -> fetch allocator & query result
-    //          aRandomSystemFn(allocator, resources) -> fetch allocator & resources
-    pub const Fn = *const fn (*World, std.mem.Allocator) anyerror!void;
-    pub const ExecOrder = enum {
-        startup,
-        update,
-    };
-};
 
 // TODO: add docs
 pub const Module = struct {
@@ -346,9 +332,13 @@ test "Init entities" {
     try std.testing.expect(comp_value_2.y == 6);
 }
 
-pub fn addSystem(self: *World, order: System.ExecOrder, @"fn": System.Fn) *World {
+pub fn addSystem(
+    self: *World,
+    order: System.ExecOrder,
+    comptime system_fn: anytype,
+) *World {
     self.systems.append(self.alloc, .{
-        .@"fn" = @"fn",
+        .handler = system.systemHandler(system_fn),
         .order = order,
     }) catch @panic("OOM");
     return self;
@@ -357,10 +347,14 @@ pub fn addSystem(self: *World, order: System.ExecOrder, @"fn": System.Fn) *World
 pub fn addSystems(
     self: *World,
     order: System.ExecOrder,
-    fns: []const System.Fn,
+    comptime fns: anytype,
 ) *World {
-    for (fns) |f| {
-        _ = self.addSystem(order, f);
+    const T = ecs_util.Deref(@TypeOf(fns));
+    if (@typeInfo(T) != .@"struct")
+        @compileError("Expected a tuple or struct, found " ++ @typeName(T));
+
+    inline for (0..std.meta.fields(T).len) |i| {
+        _ = self.addSystem(order, fns[i]);
     }
     return self;
 }
@@ -382,18 +376,21 @@ pub fn addModule(self: *World, comptime T: type) void {
 }
 
 pub fn run(self: *World) !void {
-    for (self.systems.items) |system| {
-        if (system.order == .startup)
-            try system.@"fn"(self, self.arena.allocator());
+    std.log.debug("STARTUP STAGE:", .{});
+    for (self.systems.items) |s| {
+        if (s.order == .startup)
+            try s.handler(self);
     }
 
+    std.log.debug("UPDATE STAGE:", .{});
     while (!self.should_exit) {
         rl.beginDrawing();
         defer rl.endDrawing();
 
-        for (self.systems.items) |system| {
-            if (system.order == .update)
-                try system.@"fn"(self, self.arena.allocator());
+        for (self.systems.items) |s| {
+            if (s.order == .update) {
+                try s.handler(self);
+            }
         }
         rl.clearBackground(.white);
 

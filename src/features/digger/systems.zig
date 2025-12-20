@@ -10,7 +10,7 @@ const InGrid = ecs_common.InGrid;
 const Digger = @import("mod.zig").Digger;
 
 /// Draw all diggers
-pub fn updatePos(w: *World, _: std.mem.Allocator) !void {
+pub fn updatePos(w: *World) !void {
     const queries = try w.query(&.{ *Position, InGrid, Digger });
 
     for (queries) |query| {

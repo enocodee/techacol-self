@@ -8,7 +8,7 @@ const Score = @import("../score/mod.zig").Score;
 const DebugBox = components.DebugBox;
 const DebugInfo = components.DebugInfo;
 
-pub fn updateInfo(w: *World, _: std.mem.Allocator) !void {
+pub fn updateInfo(w: *World) !void {
     const query = (try w.query(&.{*DebugInfo}))[0];
     const score = try w.getResource(Score);
     const info = query[0];
@@ -20,7 +20,7 @@ pub fn updateInfo(w: *World, _: std.mem.Allocator) !void {
     };
 }
 
-pub fn render(w: *World, _: std.mem.Allocator) !void {
+pub fn render(w: *World) !void {
     const queries = try w.query(&.{ DebugBox, DebugInfo });
 
     for (queries) |q| {

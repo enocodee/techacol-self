@@ -24,7 +24,7 @@ pub const ButtonBundle = button.Bundle;
 
 pub const CommonModule = struct {
     pub fn build(w: *World) void {
-        _ = w.addSystems(.update, &.{
+        _ = w.addSystems(.update, .{
             rectangle.render,
             button.render,
             grid.render,

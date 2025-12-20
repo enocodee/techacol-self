@@ -11,7 +11,7 @@ const Point = @import("components.zig").Point;
 const Score = @import("mod.zig").Score;
 const Digger = @import("../digger/mod.zig").Digger;
 
-pub fn updatePos(w: *World, _: std.mem.Allocator) !void {
+pub fn updatePos(w: *World) !void {
     const queries = try w.query(&.{ *Position, InGrid, Point });
 
     for (queries) |query| {
@@ -25,7 +25,7 @@ pub fn updatePos(w: *World, _: std.mem.Allocator) !void {
     }
 }
 
-pub fn updateScore(w: *World, _: std.mem.Allocator) !void {
+pub fn updateScore(w: *World) !void {
     const score = try w.getMutResource(Score);
     const point_queries = try w.query(&.{ *Point, InGrid });
     const digger_queries = try w.query(&.{Digger});

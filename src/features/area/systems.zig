@@ -6,7 +6,7 @@ const World = @import("ecs").World;
 const Grid = @import("ecs").common.Grid;
 const Area = @import("components.zig").Area;
 
-pub fn render(w: *World, _: std.mem.Allocator) !void {
+pub fn render(w: *World) !void {
     const assets = try w.getMutResource(GameAssets);
     const queries = try w.query(&.{ Grid, Area });
     const font = try assets.getMainFont();

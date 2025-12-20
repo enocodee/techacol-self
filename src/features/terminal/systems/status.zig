@@ -1,15 +1,16 @@
 const std = @import("std");
 const rl = @import("raylib");
 const resource = @import("../resources.zig");
-const ecs_common = @import("ecs").common;
+const ecs = @import("ecs");
+const ecs_common = ecs.common;
 const input = @import("input.zig");
 
-const Children = @import("ecs").common.Children;
-const World = @import("ecs").World;
+const World = ecs.World;
 const Terminal = @import("../mod.zig").Terminal;
 const Buffer = @import("../mod.zig").Buffer;
 const Executor = @import("../../command_executor/mod.zig").CommandExecutor;
 
+const Children = ecs_common.Children;
 const Rectangle = ecs_common.Rectangle;
 const Position = ecs_common.Position;
 const Button = ecs_common.Button;
@@ -17,7 +18,7 @@ const Grid = ecs_common.Grid;
 
 const State = resource.State;
 
-pub fn inHover(w: *World, _: std.mem.Allocator) !void {
+pub fn inHover(w: *World) !void {
     const queries = try w.query(&.{
         Position,
         Rectangle,
@@ -42,7 +43,7 @@ pub fn inHover(w: *World, _: std.mem.Allocator) !void {
     }
 }
 
-pub fn inWindowResizing(w: *World, _: std.mem.Allocator) !void {
+pub fn inWindowResizing(w: *World) !void {
     const queries = try w.query(&.{ *Position, Terminal });
     const btn_queries = try w.query(&.{ *Position, Button });
 
@@ -55,7 +56,7 @@ pub fn inWindowResizing(w: *World, _: std.mem.Allocator) !void {
     }
 }
 
-pub fn inFocused(w: *World, _: std.mem.Allocator) !void {
+pub fn inFocused(w: *World) !void {
     const state = try w.getMutResource(State);
     const buf, const grid, _ = (try w.query(&.{ *Buffer, Grid, Terminal }))[0];
 
@@ -63,7 +64,7 @@ pub fn inFocused(w: *World, _: std.mem.Allocator) !void {
         try input.handleKeys(w.alloc, grid, buf);
 }
 
-pub fn inClickedRun(w: *World, _: std.mem.Allocator) !void {
+pub fn inClickedRun(w: *World) !void {
     const state = try w.getResource(State);
     const child = (try w.query(&.{
         @import("ecs").common.Children,
@@ -100,7 +101,7 @@ pub fn inClickedRun(w: *World, _: std.mem.Allocator) !void {
     }
 }
 
-pub fn inCmdRunning(w: *World, _: std.mem.Allocator) !void {
+pub fn inCmdRunning(w: *World) !void {
     const state = try w.getMutResource(State);
     const executor = (try w.query(&.{ Executor, Terminal }))[0][0];
     const child = (try w.query(&.{ Children, Terminal }))[0][0];
