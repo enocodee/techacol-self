@@ -12,7 +12,7 @@ const World = ecs.World;
 
 const GameAssets = @import("GameAssets.zig");
 
-fn closeWindow(w: *World, _: std.mem.Allocator) !void {
+fn closeWindow(w: *World) !void {
     if (rl.windowShouldClose()) {
         w.should_exit = true;
     }

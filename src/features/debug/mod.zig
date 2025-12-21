@@ -11,13 +11,13 @@ const Info = components.DebugInfo;
 pub fn build(w: *World) void {
     _ = w
         .addSystem(.startup, spawn)
-        .addSystems(.update, &.{
+        .addSystems(.update, .{
         systems.updateInfo,
         systems.render,
     });
 }
 
-pub fn spawn(w: *World, _: std.mem.Allocator) !void {
+pub fn spawn(w: *World) !void {
     _ = w.spawnEntity(
         .{
             Info{},

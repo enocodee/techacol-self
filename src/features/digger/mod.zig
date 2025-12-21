@@ -23,7 +23,7 @@ pub fn build(w: *World) void {
         .addSystem(.update, systems.updatePos);
 }
 
-pub fn spawn(w: *World, _: std.mem.Allocator) !void {
+pub fn spawn(w: *World) !void {
     _ = w.spawnEntity(.{
         DiggerBundle{
             .digger = .{ .idx_in_grid = .{ .r = 0, .c = 0 } },

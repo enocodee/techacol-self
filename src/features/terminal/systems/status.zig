@@ -1,15 +1,18 @@
 const std = @import("std");
 const rl = @import("raylib");
 const resource = @import("../resources.zig");
-const ecs_common = @import("ecs").common;
+const ecs = @import("ecs");
+const ecs_common = ecs.common;
 const input = @import("input.zig");
 
-const Children = @import("ecs").common.Children;
-const World = @import("ecs").World;
+const Query = ecs.query.Query;
+const Resource = ecs.query.Resource;
+const World = ecs.World;
 const Terminal = @import("../mod.zig").Terminal;
 const Buffer = @import("../mod.zig").Buffer;
 const Executor = @import("../../command_executor/mod.zig").CommandExecutor;
 
+const Children = ecs_common.Children;
 const Rectangle = ecs_common.Rectangle;
 const Position = ecs_common.Position;
 const Button = ecs_common.Button;
@@ -17,14 +20,12 @@ const Grid = ecs_common.Grid;
 
 const State = resource.State;
 
-pub fn inHover(w: *World, _: std.mem.Allocator) !void {
-    const queries = try w.query(&.{
-        Position,
-        Rectangle,
-        Terminal,
-    });
-    const state = try w.getMutResource(State);
-    const pos, const rec, _ = queries[0];
+pub fn inHover(
+    res_state: Resource(*State),
+    queries: Query(&.{ Position, Rectangle, Terminal }),
+) !void {
+    const state = res_state.result;
+    const pos, const rec, _ = queries.single();
 
     const is_hovered = rl.checkCollisionPointRec(rl.getMousePosition(), .{
         .x = @floatFromInt(pos.x),
@@ -42,12 +43,13 @@ pub fn inHover(w: *World, _: std.mem.Allocator) !void {
     }
 }
 
-pub fn inWindowResizing(w: *World, _: std.mem.Allocator) !void {
-    const queries = try w.query(&.{ *Position, Terminal });
-    const btn_queries = try w.query(&.{ *Position, Button });
+pub fn inWindowResizing(
+    q_terminal_pos: Query(&.{ *Position, Terminal }),
+    q_btn: Query(&.{ *Position, Button }),
+) !void {
+    const pos, _ = q_terminal_pos.single();
+    const btn_pos, _ = q_btn.single();
 
-    const pos, _ = queries[0];
-    const btn_pos, _ = btn_queries[0];
     if (rl.isWindowResized()) {
         pos.x = rl.getScreenWidth() - 300;
         btn_pos.y = pos.y + 350;
@@ -55,27 +57,31 @@ pub fn inWindowResizing(w: *World, _: std.mem.Allocator) !void {
     }
 }
 
-pub fn inFocused(w: *World, _: std.mem.Allocator) !void {
-    const state = try w.getMutResource(State);
-    const buf, const grid, _ = (try w.query(&.{ *Buffer, Grid, Terminal }))[0];
+pub fn inFocused(
+    alloc: std.mem.Allocator,
+    res_state: Resource(State),
+    queries: Query(&.{ *Buffer, Grid, Terminal }),
+) !void {
+    const buf, const grid, _ = queries.single();
 
-    if (state.is_focused)
-        try input.handleKeys(w.alloc, grid, buf);
+    if (res_state.result.is_focused)
+        try input.handleKeys(alloc, grid, buf);
 }
 
-pub fn inClickedRun(w: *World, _: std.mem.Allocator) !void {
-    const state = try w.getResource(State);
-    const child = (try w.query(&.{
-        @import("ecs").common.Children,
-        Terminal,
-    }))[0][0];
+pub fn inClickedRun(
+    w: *World,
+    res_state: Resource(State),
+    child_queries: Query(&.{ @import("ecs").common.Children, Terminal }),
+    buf_queries: Query(&.{ Buffer, Terminal }),
+) !void {
+    const child = child_queries.single()[0];
     // TODO: handle query children components
     const rec, const pos =
         (try w
             .entity(child.id)
             .getComponents(&.{ Rectangle, Position }));
 
-    const buf, _ = (try w.query(&.{ Buffer, Terminal }))[0];
+    const buf, _ = buf_queries.single();
 
     if (rl.checkCollisionPointRec(
         rl.getMousePosition(),
@@ -86,7 +92,7 @@ pub fn inClickedRun(w: *World, _: std.mem.Allocator) !void {
             .height = @floatFromInt(rec.height),
         },
     )) {
-        if (rl.isMouseButtonPressed(.left) and state.active) {
+        if (rl.isMouseButtonPressed(.left) and res_state.result.active) {
             const content = try buf.toString(w.alloc);
             defer w.alloc.free(content);
 
@@ -94,16 +100,20 @@ pub fn inClickedRun(w: *World, _: std.mem.Allocator) !void {
                 w,
                 w.alloc,
                 content,
-                @enumFromInt(state.selected_lang),
+                @enumFromInt(res_state.result.selected_lang),
             );
         }
     }
 }
 
-pub fn inCmdRunning(w: *World, _: std.mem.Allocator) !void {
+pub fn inCmdRunning(
+    w: *World,
+    q_child: Query(&.{ Children, Terminal }),
+    q_executor: Query(&.{ Executor, Terminal }),
+) !void {
     const state = try w.getMutResource(State);
-    const executor = (try w.query(&.{ Executor, Terminal }))[0][0];
-    const child = (try w.query(&.{ Children, Terminal }))[0][0];
+    const executor = q_executor.single()[0];
+    const child = q_child.single()[0];
     const run_btn = (try w.entity(child.id).getComponents(&.{*Button}))[0];
 
     state.*.active = !executor.is_running;

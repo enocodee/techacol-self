@@ -1,17 +1,22 @@
 const std = @import("std");
 const rl = @import("raylib");
+const ecs = @import("ecs");
 const components = @import("components.zig");
 
-const World = @import("ecs").World;
-const Position = @import("ecs").common.Position;
+const World = ecs.World;
+const Query = ecs.query.Query;
+const Resource = ecs.query.Resource;
+const Position = ecs.common.Position;
 const Score = @import("../score/mod.zig").Score;
 const DebugBox = components.DebugBox;
 const DebugInfo = components.DebugInfo;
 
-pub fn updateInfo(w: *World, _: std.mem.Allocator) !void {
-    const query = (try w.query(&.{*DebugInfo}))[0];
-    const score = try w.getResource(Score);
-    const info = query[0];
+pub fn updateInfo(
+    res_score: Resource(Score),
+    queries: Query(&.{*DebugInfo}),
+) !void {
+    const score = res_score.result;
+    const info = queries.single()[0];
 
     const rusage = std.posix.getrusage(0);
     info.* = .{
@@ -20,10 +25,8 @@ pub fn updateInfo(w: *World, _: std.mem.Allocator) !void {
     };
 }
 
-pub fn render(w: *World, _: std.mem.Allocator) !void {
-    const queries = try w.query(&.{ DebugBox, DebugInfo });
-
-    for (queries) |q| {
+pub fn render(queries: Query(&.{ DebugBox, DebugInfo })) !void {
+    for (queries.result) |q| {
         const box, const info = q;
 
         box.draw(&.{

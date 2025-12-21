@@ -26,7 +26,7 @@ pub fn build(w: *World) void {
     });
 }
 
-pub fn spawn(w: *World, _: std.mem.Allocator) !void {
+pub fn spawn(w: *World) !void {
     const grid = try w.getComponent(0, Grid);
     _ = w.spawnEntity(.{
         Position{},
