@@ -7,6 +7,7 @@ const EntityID = @import("Entity.zig").ID;
 
 pub const QueryError = error{OutOfMemory} || World.GetComponentError;
 
+/// A wrapper for automatically querying a specified entity components.
 pub fn Query(comptime types: []const type) type {
     return struct {
         result: []Tuple = &.{},
