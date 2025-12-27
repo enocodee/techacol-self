@@ -107,7 +107,7 @@ pub fn spawnEntity(
     const id = self.newEntity();
 
     inline for (std.meta.fields(T)) |f| {
-        try self.extractComponent(id, f.type, @field(values, f.name));
+        self.extractComponent(id, f.type, @field(values, f.name));
     }
 
     return .{
@@ -123,14 +123,14 @@ fn extractComponent(
     id: Entity.ID,
     comptime T: type,
     comp: T,
-) !void {
+) void {
     const ComponentType = @TypeOf(comp);
 
     if (comptime std.mem.endsWith(u8, @typeName(ComponentType), "Bundle")) {
         std.log.debug("extract bundle {s}", .{@typeName(ComponentType)});
-        try self.extractBundleComponent(id, T, comp);
+        self.extractBundleComponent(id, T, comp);
     } else {
-        try self.setComponent(id, ComponentType, comp);
+        self.setComponent(id, ComponentType, comp);
     }
 }
 
@@ -140,13 +140,13 @@ fn extractBundleComponent(
     id: Entity.ID,
     comptime T: type,
     bundle: T,
-) !void {
+) void {
     if (@typeInfo(@TypeOf(bundle)) != .@"struct")
         @panic("Expected a tuple or struct for a bundle, found " ++ @typeName(@TypeOf(bundle)));
 
     const comps = @typeInfo(@TypeOf(bundle)).@"struct".fields;
     inline for (comps) |f| {
-        try self.extractComponent(id, f.type, @field(bundle, f.name));
+        self.extractComponent(id, f.type, @field(bundle, f.name));
     }
 }
 
@@ -256,7 +256,7 @@ pub fn setComponent(
     entity_id: Entity.ID,
     comptime T: type,
     component_value: T,
-) !void {
+) void {
     // get the storage or create the new one
     const s = ErasedComponentStorage
         .cast(self.*, T) catch
