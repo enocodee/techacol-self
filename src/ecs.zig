@@ -23,4 +23,7 @@ pub const query = struct {
 
 test {
     @import("std").testing.refAllDeclsRecursive(@This());
+
+    _ = @import("ecs/schedule/schedule.zig").ScheduleGraph;
+    _ = @import("ecs/schedule/schedule.zig").Scheduler;
 }

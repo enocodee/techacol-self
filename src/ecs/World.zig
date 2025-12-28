@@ -315,14 +315,14 @@ test "Init entities" {
     defer world.deinit();
 
     const entity_1 = world.newEntity();
-    try world.setComponent(entity_1, Position, .{ .x = 5, .y = 6 });
+    world.setComponent(entity_1, Position, .{ .x = 5, .y = 6 });
 
     const comp_value_1 = try world.getComponent(entity_1, Position);
     try std.testing.expect(comp_value_1.x == 5);
     try std.testing.expect(comp_value_1.y == 6);
 
     const entity_2 = world.newEntity();
-    try world.setComponent(entity_2, Position, .{ .x = 10, .y = 6 });
+    world.setComponent(entity_2, Position, .{ .x = 10, .y = 6 });
 
     const comp_value_2 = try world.getComponent(entity_2, Position);
     try std.testing.expect(comp_value_2.x == 10);
@@ -334,10 +334,10 @@ pub fn addSystem(
     order: System.ExecOrder,
     comptime system_fn: anytype,
 ) *World {
-    self.systems.append(self.alloc, .{
+    _ = self.spawnEntity(&.{System{
         .handler = system.systemHandler(system_fn),
         .order = order,
-    }) catch @panic("OOM");
+    }});
     return self;
 }
 
@@ -373,10 +373,12 @@ pub fn addModule(self: *World, comptime T: type) void {
 }
 
 pub fn run(self: *World) !void {
+    const q_system = try self.query(&.{System});
     std.log.debug("STARTUP STAGE:", .{});
-    for (self.systems.items) |s| {
-        if (s.order == .startup)
-            try s.handler(self);
+    for (q_system.many()) |s| {
+        const sys = s[0];
+        if (sys.order == .startup)
+            try sys.handler(self);
     }
 
     std.log.debug("UPDATE STAGE:", .{});
@@ -384,9 +386,10 @@ pub fn run(self: *World) !void {
         rl.beginDrawing();
         defer rl.endDrawing();
 
-        for (self.systems.items) |s| {
-            if (s.order == .update) {
-                try s.handler(self);
+        for (q_system.many()) |s| {
+            const sys = s[0];
+            if (sys.order == .update) {
+                try sys.handler(self);
             }
         }
         rl.clearBackground(.white);

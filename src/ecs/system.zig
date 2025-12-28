@@ -1,3 +1,11 @@
+//! A namepsace that contains all thing related to `system`.
+//!
+//! Systems define how controlling elements (entity, component,
+//! resource, ...) in application.
+//!
+//! * Registry: where all systems are registered (stored).
+//! * Scheduler: decides which system is executed.
+//! * Executor: decides how system is executed.
 const std = @import("std");
 
 const Allocator = std.mem.Allocator;
@@ -6,6 +14,7 @@ const World = @import("World.zig");
 
 pub const Handler = *const fn (*World) anyerror!void;
 
+/// A component represent for `systems`
 pub const System = struct {
     handler: Handler,
     order: ExecOrder,
@@ -21,6 +30,7 @@ pub fn systemHandler(comptime system: anytype) Handler {
     const H = struct {
         pub fn handle(w: *World) !void {
             const SystemType = @TypeOf(system);
+            // SAFETY: assign after parsing
             var args: std.meta.ArgsTuple(SystemType) = undefined;
             const system_info = @typeInfo(SystemType).@"fn";
 

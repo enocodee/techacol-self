@@ -319,7 +319,7 @@ test "get keys of min storage" {
 
     // add one more component
     const Weapon = struct { name: []const u8 };
-    try w.setComponent(1, Weapon, .{ .name = "sword" });
+    w.setComponent(1, Weapon, .{ .name = "sword" });
 
     const k2 = try getKeysOfMinStorage(w, &.{ Position, Velocity, Weapon });
 
