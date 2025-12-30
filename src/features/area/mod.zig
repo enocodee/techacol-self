@@ -1,5 +1,6 @@
 const std = @import("std");
 const systems = @import("systems.zig");
+const scheds = @import("ecs").schedules;
 
 const World = @import("ecs").World;
 const Grid = @import("ecs").common.Grid;
@@ -8,8 +9,8 @@ const Area = @import("components.zig").Area;
 
 pub fn build(w: *World) void {
     _ = w
-        .addSystem(.startup, spawn)
-        .addSystems(.update, .{systems.render});
+        .addSystem(scheds.startup, spawn)
+        .addSystems(scheds.update, .{systems.render});
 }
 
 pub fn spawn(w: *World, alloc: std.mem.Allocator) !void {

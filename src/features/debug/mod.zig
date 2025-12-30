@@ -1,5 +1,6 @@
 // TODO: Move this to `ecs.common`
 const rl = @import("raylib");
+const scheds = @import("ecs").schedules;
 const systems = @import("systems.zig");
 const components = @import("components.zig");
 
@@ -9,8 +10,8 @@ const Info = components.DebugInfo;
 
 pub fn build(w: *World) void {
     _ = w
-        .addSystem(.startup, spawn)
-        .addSystems(.update, .{
+        .addSystem(scheds.startup, spawn)
+        .addSystems(scheds.update, .{
         systems.updateInfo,
         systems.render,
     });

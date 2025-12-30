@@ -1,4 +1,5 @@
 const systems = @import("systems.zig");
+const scheds = @import("ecs").schedules;
 
 const World = @import("ecs").World;
 
@@ -10,8 +11,8 @@ pub const check = @import("cmds/check.zig");
 
 pub fn build(w: *World) void {
     _ = w
-        .addSystem(.startup, spawn)
-        .addSystem(.update, systems.updatePos);
+        .addSystem(scheds.startup, spawn)
+        .addSystem(scheds.update, systems.updatePos);
 }
 
 pub fn spawn(w: *World) !void {

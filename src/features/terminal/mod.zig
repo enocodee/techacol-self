@@ -1,5 +1,6 @@
 const rl = @import("raylib");
 const ecs_common = @import("ecs").common;
+const scheds = @import("ecs").schedules;
 const resources = @import("resources.zig");
 const systems = @import("systems.zig");
 const components = @import("components.zig");
@@ -26,8 +27,8 @@ pub fn build(w: *World) void {
     _ = w
         .addResource(Style, .{ .font = font, .font_size = 20 })
         .addResource(State, .{})
-        .addSystem(.startup, spawn)
-        .addSystems(.update, .{
+        .addSystem(scheds.startup, spawn)
+        .addSystems(scheds.update, .{
         systems.input.execCmds,
         systems.status.inHover,
         systems.status.inWindowResizing,

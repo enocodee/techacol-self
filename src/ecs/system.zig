@@ -17,12 +17,26 @@ pub const Handler = *const fn (*World) anyerror!void;
 /// A component represent for `systems`
 pub const System = struct {
     handler: Handler,
-    order: ExecOrder,
 
-    pub const ExecOrder = enum {
-        startup,
-        update,
-    };
+    pub fn fromFn(comptime system: anytype) System {
+        const Fn = @TypeOf(system);
+        const fn_info = @typeInfo(Fn);
+        if (fn_info != .@"fn")
+            @compileError("expected a function, found " ++ @typeName(Fn));
+
+        const ret_info = @typeInfo(fn_info.@"fn".return_type.?);
+        if (ret_info == .error_union) {
+            const error_union = ret_info.error_union;
+            if (error_union.payload != void)
+                @compileError("the system return type must be `anyerror!void`, found `anyerror!" ++ @typeName(error_union.payload) ++ "`");
+        } else {
+            @compileError("the system return type must be `anyerror!void`, found " ++ @typeName(fn_info.@"fn".return_type.?));
+        }
+
+        return .{
+            .handler = toHandler(system),
+        };
+    }
 };
 
 /// Convert `system` to `handler` with wired params.

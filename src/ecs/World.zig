@@ -1,3 +1,5 @@
+//! Manage anything in the application.
+//!
 //! # Features:
 //! * Create and get new entity (entity_id).
 //! * Lazy init storages.
@@ -20,7 +22,10 @@ const ErasedComponentStorage = component.ErasedStorage;
 const ComponentStorage = component.Storage;
 const ErasedResourceType = resource.ErasedResource;
 const Entity = @import("Entity.zig");
+const SystemScheduler = @import("schedule.zig").Scheduler;
 const System = system.System;
+
+const ScheduleLabel = @import("schedule.zig").Label;
 
 const World = @This();
 
@@ -40,6 +45,7 @@ entity_count: usize = 0,
 component_storages: std.AutoHashMap(u64, ErasedComponentStorage),
 systems: std.ArrayList(System),
 resources: std.AutoHashMap(u64, ErasedResourceType),
+system_scheduler: SystemScheduler = .{},
 should_exit: bool = false,
 /// The `long-live` allocator.
 /// All things are allocated by this will persist until
@@ -87,6 +93,7 @@ pub fn deinit(self: *World) void {
     self.resources.deinit();
     self.systems.deinit(self.alloc);
 
+    self.system_scheduler.deinit(self.alloc);
     self.arena.deinit();
     self.alloc.destroy(self.arena);
 }
@@ -329,21 +336,26 @@ test "Init entities" {
     try std.testing.expect(comp_value_2.y == 6);
 }
 
+/// This function can cause to `panic` due to the `schedule_label`
+/// isn't in the application scheduler.
 pub fn addSystem(
     self: *World,
-    order: System.ExecOrder,
+    schedule_label: ScheduleLabel,
     comptime system_fn: anytype,
 ) *World {
-    _ = self.spawnEntity(&.{System{
-        .handler = system.toHandler(system_fn),
-        .order = order,
-    }});
+    const label =
+        self
+            .system_scheduler
+            .labels
+            .getPtr(schedule_label._label) orelse @panic("invalid shedule"); // NOTE: this is intended :)
+
+    label.addSystem(self.alloc, system_fn) catch @panic("OOM");
     return self;
 }
 
 pub fn addSystems(
     self: *World,
-    order: System.ExecOrder,
+    label: ScheduleLabel,
     comptime fns: anytype,
 ) *World {
     const T = ecs_util.Deref(@TypeOf(fns));
@@ -351,7 +363,7 @@ pub fn addSystems(
         @compileError("Expected a tuple or struct, found " ++ @typeName(T));
 
     inline for (0..std.meta.fields(T).len) |i| {
-        _ = self.addSystem(order, fns[i]);
+        _ = self.addSystem(label, fns[i]);
     }
     return self;
 }
@@ -372,30 +384,34 @@ pub fn addModule(self: *World, comptime T: type) void {
     }
 }
 
-pub fn run(self: *World) !void {
-    const q_system = try self.query(&.{System});
-    std.log.debug("STARTUP STAGE:", .{});
-    for (q_system.many()) |s| {
-        const sys = s[0];
-        if (sys.order == .startup)
-            try sys.handler(self);
-    }
+pub fn addSchedule(
+    self: *World,
+    label: ScheduleLabel,
+) *World {
+    self
+        .system_scheduler
+        .addSchedule(self.alloc, label);
 
-    std.log.debug("UPDATE STAGE:", .{});
+    return self;
+}
+
+pub fn runSchedule(
+    self: *World,
+    label: ScheduleLabel,
+) !void {
+    try self
+        .system_scheduler
+        .runSchedule(self, label);
+}
+
+pub fn run(self: *World) !void {
     while (!self.should_exit) {
         rl.beginDrawing();
         defer rl.endDrawing();
 
-        for (q_system.many()) |s| {
-            const sys = s[0];
-            if (sys.order == .update) {
-                try sys.handler(self);
-            }
-        }
-        rl.clearBackground(.white);
+        try self.runSchedule(@import("common.zig").entry);
 
-        // free all things are allocated by `world.arena`
-        _ = self.arena.reset(.free_all);
+        rl.clearBackground(.white);
     }
 }
 
