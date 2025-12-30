@@ -9,8 +9,6 @@ nodes: std.ArrayList(*Node) = .empty,
 count: usize = 0,
 
 pub const Node = struct {
-    pub const ID = usize;
-
     id: usize,
     children: std.ArrayList(*Node) = .empty,
 
