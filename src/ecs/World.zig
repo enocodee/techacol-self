@@ -17,12 +17,14 @@ const ecs_util = @import("util.zig");
 const ecs_common = @import("common.zig");
 const _query = @import("query.zig");
 const system = @import("system.zig");
+const schedule = @import("schedule.zig");
 
 const ErasedComponentStorage = component.ErasedStorage;
 const ComponentStorage = component.Storage;
 const ErasedResourceType = resource.ErasedResource;
 const Entity = @import("Entity.zig");
-const SystemScheduler = @import("schedule.zig").Scheduler;
+const SystemScheduler = schedule.Scheduler;
+const scheds = schedule.schedules;
 const System = system.System;
 
 const ScheduleLabel = @import("schedule.zig").Label;
@@ -338,6 +340,7 @@ test "Init entities" {
 
 /// This function can cause to `panic` due to the `schedule_label`
 /// isn't in the application scheduler.
+/// See more info of `ScheduleLabel` in `ecs.schedule.Label`.
 pub fn addSystem(
     self: *World,
     schedule_label: ScheduleLabel,
@@ -404,12 +407,15 @@ pub fn runSchedule(
         .runSchedule(self, label);
 }
 
+/// Start drawing in raylib and run the `.entry` schedule
 pub fn run(self: *World) !void {
+    _ = self.addSchedule(scheds.entry);
+
     while (!self.should_exit) {
         rl.beginDrawing();
         defer rl.endDrawing();
 
-        try self.runSchedule(@import("common.zig").entry);
+        try self.runSchedule(scheds.entry);
 
         rl.clearBackground(.white);
     }

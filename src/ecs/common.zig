@@ -21,9 +21,6 @@ pub const Position = position.Position;
 pub const Button = button.Button;
 pub const ButtonBundle = button.Bundle;
 
-// the first schedule in the application (entrypoint)
-pub const entry: @import("schedule.zig").Label = .init("entry");
-
 /// # Addons:
 /// + Add the entry schedule & the main schedule.
 /// + Extract & render functions for common components
@@ -32,7 +29,6 @@ pub const entry: @import("schedule.zig").Label = .init("entry");
 pub const CommonModule = struct {
     pub fn build(w: *World) void {
         _ = w
-            .addSchedule(entry)
             .addModules(&.{@import("schedule.zig").main_schedule_mod})
             .addSystems(schedules.update, .{
             rectangle.render,

@@ -1,3 +1,11 @@
+//! This module exports all thing related to scheduling in `ecs`.
+//!
+//! Exported:
+//! * Label
+//! * Graph
+//! * Scheduler
+//! * schedules
+//! * main_schedule_mod (used in `CommonModule`):
 const Resource = @import("resource.zig").Resource;
 const World = @import("World.zig");
 
@@ -5,7 +13,13 @@ pub const Label = @import("schedule/label.zig").Label;
 pub const Graph = @import("schedule/Graph.zig");
 pub const Scheduler = @import("schedule/Scheduler.zig");
 
+/// All schedule labels are pre-defined in the `ecs`.
 pub const schedules = struct {
+    /// The schedule should be run first of all whenever
+    /// frame begins.
+    /// The default entrypoint for schedules.
+    pub const entry = Label.init("entry");
+
     /// Start the application
     pub const startup = Label.init("startup");
 
@@ -48,7 +62,14 @@ fn endFrame(w: *World) !void {
     _ = w.arena.reset(.free_all);
 }
 
-/// The main schedule includes (startup, update, last)
+/// A standard schedule pre-defined in the application.
+/// # Orders:
+/// * Run only once the application starts:
+/// `startup`
+///         |
+///         v
+/// * Run within the application's main loop:
+/// `update` -> `last`
 pub const main_schedule_mod = struct {
     pub fn build(w: *@import("World.zig")) void {
         _ = w
@@ -56,7 +77,7 @@ pub const main_schedule_mod = struct {
             .addSchedule(schedules.update)
             .addSchedule(schedules.last)
             .addResource(MainScheduleOrder, .{})
-            .addSystem(@import("common.zig").entry, run)
+            .addSystem(schedules.entry, run)
             .addSystem(schedules.last, endFrame);
     }
 };
