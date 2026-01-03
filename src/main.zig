@@ -1,5 +1,6 @@
 const std = @import("std");
 const rl = @import("raylib");
+const schedules = @import("ecs").schedules;
 
 const digger_mod = @import("features/digger/mod.zig");
 const area_mod = @import("features/area/mod.zig");
@@ -27,7 +28,7 @@ fn loop(alloc: std.mem.Allocator) !void {
     try world
         .addModules(&.{ecs.CommonModule})
         .addResource(GameAssets, .{})
-        .addSystems(.update, &.{closeWindow})
+        .addSystems(schedules.update, &.{closeWindow})
         .addModules(&.{
             area_mod,
             terminal_mod,

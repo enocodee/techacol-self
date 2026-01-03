@@ -1,4 +1,5 @@
 const component = @import("ecs/component.zig");
+const scheds = @import("ecs/schedule.zig").schedules;
 
 pub const ErasedComponentStorage = component.ErasedStorage;
 pub const ComponentStorage = component.Storage;
@@ -21,6 +22,15 @@ pub const query = struct {
     pub const Resource = @import("ecs/resource.zig").Resource;
 };
 
+pub const schedules = struct {
+    pub const startup = scheds.startup;
+    pub const update = scheds.update;
+    pub const last = scheds.last;
+};
+
 test {
     @import("std").testing.refAllDeclsRecursive(@This());
+
+    // NOTE: import for testing steps
+    _ = scheds.Graph;
 }

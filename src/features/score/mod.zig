@@ -1,6 +1,6 @@
-const std = @import("std");
 const ecs = @import("ecs");
 const ecs_common = ecs.common;
+const scheds = ecs.schedules;
 
 const systems = @import("systems.zig");
 
@@ -19,8 +19,8 @@ pub const Score = struct {
 pub fn build(w: *World) void {
     _ = w
         .addResource(Score, .{})
-        .addSystem(.startup, spawn)
-        .addSystems(.update, &.{
+        .addSystem(scheds.startup, spawn)
+        .addSystems(scheds.update, &.{
         systems.updatePos,
         systems.updateScore,
     });

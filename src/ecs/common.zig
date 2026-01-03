@@ -1,6 +1,3 @@
-const std = @import("std");
-const rl = @import("raylib");
-
 const World = @import("World.zig");
 
 const position = @import("common/position.zig");
@@ -9,6 +6,8 @@ const button = @import("common/button.zig");
 
 const rectangle = @import("common/rectangle.zig");
 const circle = @import("common/circle.zig");
+
+const schedules = @import("schedule.zig").schedules;
 
 // Shape components
 pub const Rectangle = rectangle.Rectangle;
@@ -22,9 +21,16 @@ pub const Position = position.Position;
 pub const Button = button.Button;
 pub const ButtonBundle = button.Bundle;
 
+/// # Addons:
+/// + Add the entry schedule & the main schedule.
+/// + Extract & render functions for common components
+/// automatically.
+///
 pub const CommonModule = struct {
     pub fn build(w: *World) void {
-        _ = w.addSystems(.update, .{
+        _ = w
+            .addModules(&.{@import("schedule.zig").main_schedule_mod})
+            .addSystems(schedules.update, .{
             rectangle.render,
             button.render,
             grid.render,

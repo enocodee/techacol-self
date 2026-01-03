@@ -1,3 +1,5 @@
+//! Manage anything in the application.
+//!
 //! # Features:
 //! * Create and get new entity (entity_id).
 //! * Lazy init storages.
@@ -15,12 +17,17 @@ const ecs_util = @import("util.zig");
 const ecs_common = @import("common.zig");
 const _query = @import("query.zig");
 const system = @import("system.zig");
+const schedule = @import("schedule.zig");
 
 const ErasedComponentStorage = component.ErasedStorage;
 const ComponentStorage = component.Storage;
 const ErasedResourceType = resource.ErasedResource;
 const Entity = @import("Entity.zig");
+const SystemScheduler = schedule.Scheduler;
+const scheds = schedule.schedules;
 const System = system.System;
+
+const ScheduleLabel = @import("schedule.zig").Label;
 
 const World = @This();
 
@@ -40,6 +47,7 @@ entity_count: usize = 0,
 component_storages: std.AutoHashMap(u64, ErasedComponentStorage),
 systems: std.ArrayList(System),
 resources: std.AutoHashMap(u64, ErasedResourceType),
+system_scheduler: SystemScheduler = .{},
 should_exit: bool = false,
 /// The `long-live` allocator.
 /// All things are allocated by this will persist until
@@ -87,6 +95,7 @@ pub fn deinit(self: *World) void {
     self.resources.deinit();
     self.systems.deinit(self.alloc);
 
+    self.system_scheduler.deinit(self.alloc);
     self.arena.deinit();
     self.alloc.destroy(self.arena);
 }
@@ -107,7 +116,7 @@ pub fn spawnEntity(
     const id = self.newEntity();
 
     inline for (std.meta.fields(T)) |f| {
-        try self.extractComponent(id, f.type, @field(values, f.name));
+        self.extractComponent(id, f.type, @field(values, f.name));
     }
 
     return .{
@@ -123,14 +132,14 @@ fn extractComponent(
     id: Entity.ID,
     comptime T: type,
     comp: T,
-) !void {
+) void {
     const ComponentType = @TypeOf(comp);
 
     if (comptime std.mem.endsWith(u8, @typeName(ComponentType), "Bundle")) {
         std.log.debug("extract bundle {s}", .{@typeName(ComponentType)});
-        try self.extractBundleComponent(id, T, comp);
+        self.extractBundleComponent(id, T, comp);
     } else {
-        try self.setComponent(id, ComponentType, comp);
+        self.setComponent(id, ComponentType, comp);
     }
 }
 
@@ -140,13 +149,13 @@ fn extractBundleComponent(
     id: Entity.ID,
     comptime T: type,
     bundle: T,
-) !void {
+) void {
     if (@typeInfo(@TypeOf(bundle)) != .@"struct")
         @panic("Expected a tuple or struct for a bundle, found " ++ @typeName(@TypeOf(bundle)));
 
     const comps = @typeInfo(@TypeOf(bundle)).@"struct".fields;
     inline for (comps) |f| {
-        try self.extractComponent(id, f.type, @field(bundle, f.name));
+        self.extractComponent(id, f.type, @field(bundle, f.name));
     }
 }
 
@@ -256,7 +265,7 @@ pub fn setComponent(
     entity_id: Entity.ID,
     comptime T: type,
     component_value: T,
-) !void {
+) void {
     // get the storage or create the new one
     const s = ErasedComponentStorage
         .cast(self.*, T) catch
@@ -315,35 +324,41 @@ test "Init entities" {
     defer world.deinit();
 
     const entity_1 = world.newEntity();
-    try world.setComponent(entity_1, Position, .{ .x = 5, .y = 6 });
+    world.setComponent(entity_1, Position, .{ .x = 5, .y = 6 });
 
     const comp_value_1 = try world.getComponent(entity_1, Position);
     try std.testing.expect(comp_value_1.x == 5);
     try std.testing.expect(comp_value_1.y == 6);
 
     const entity_2 = world.newEntity();
-    try world.setComponent(entity_2, Position, .{ .x = 10, .y = 6 });
+    world.setComponent(entity_2, Position, .{ .x = 10, .y = 6 });
 
     const comp_value_2 = try world.getComponent(entity_2, Position);
     try std.testing.expect(comp_value_2.x == 10);
     try std.testing.expect(comp_value_2.y == 6);
 }
 
+/// This function can cause to `panic` due to the `schedule_label`
+/// isn't in the application scheduler.
+/// See more info of `ScheduleLabel` in `ecs.schedule.Label`.
 pub fn addSystem(
     self: *World,
-    order: System.ExecOrder,
+    schedule_label: ScheduleLabel,
     comptime system_fn: anytype,
 ) *World {
-    self.systems.append(self.alloc, .{
-        .handler = system.systemHandler(system_fn),
-        .order = order,
-    }) catch @panic("OOM");
+    const label =
+        self
+            .system_scheduler
+            .labels
+            .getPtr(schedule_label._label) orelse @panic("invalid shedule"); // NOTE: this is intended :)
+
+    label.addSystem(self.alloc, system_fn) catch @panic("OOM");
     return self;
 }
 
 pub fn addSystems(
     self: *World,
-    order: System.ExecOrder,
+    label: ScheduleLabel,
     comptime fns: anytype,
 ) *World {
     const T = ecs_util.Deref(@TypeOf(fns));
@@ -351,7 +366,7 @@ pub fn addSystems(
         @compileError("Expected a tuple or struct, found " ++ @typeName(T));
 
     inline for (0..std.meta.fields(T).len) |i| {
-        _ = self.addSystem(order, fns[i]);
+        _ = self.addSystem(label, fns[i]);
     }
     return self;
 }
@@ -372,27 +387,37 @@ pub fn addModule(self: *World, comptime T: type) void {
     }
 }
 
-pub fn run(self: *World) !void {
-    std.log.debug("STARTUP STAGE:", .{});
-    for (self.systems.items) |s| {
-        if (s.order == .startup)
-            try s.handler(self);
-    }
+pub fn addSchedule(
+    self: *World,
+    label: ScheduleLabel,
+) *World {
+    self
+        .system_scheduler
+        .addSchedule(self.alloc, label);
 
-    std.log.debug("UPDATE STAGE:", .{});
+    return self;
+}
+
+pub fn runSchedule(
+    self: *World,
+    label: ScheduleLabel,
+) !void {
+    try self
+        .system_scheduler
+        .runSchedule(self, label);
+}
+
+/// Start drawing in raylib and run the `.entry` schedule
+pub fn run(self: *World) !void {
+    _ = self.addSchedule(scheds.entry);
+
     while (!self.should_exit) {
         rl.beginDrawing();
         defer rl.endDrawing();
 
-        for (self.systems.items) |s| {
-            if (s.order == .update) {
-                try s.handler(self);
-            }
-        }
-        rl.clearBackground(.white);
+        try self.runSchedule(scheds.entry);
 
-        // free all things are allocated by `world.arena`
-        _ = self.arena.reset(.free_all);
+        rl.clearBackground(.white);
     }
 }
 

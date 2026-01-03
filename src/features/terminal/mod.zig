@@ -1,16 +1,13 @@
-const std = @import("std");
 const rl = @import("raylib");
 const ecs_common = @import("ecs").common;
+const scheds = @import("ecs").schedules;
 const resources = @import("resources.zig");
 const systems = @import("systems.zig");
 const components = @import("components.zig");
 
 const World = @import("ecs").World;
 const Resourse = @import("ecs").query.Resource;
-const Button = ecs_common.Button;
 const ButtonBundle = ecs_common.ButtonBundle;
-const Rectangle = ecs_common.Rectangle;
-const Position = ecs_common.Position;
 const Grid = ecs_common.Grid;
 const State = resources.State;
 const Style = resources.Style;
@@ -19,7 +16,6 @@ const GameAssets = @import("../../GameAssets.zig");
 const Executor = @import("../command_executor/mod.zig").CommandExecutor;
 
 const TerminalBundle = components.TerminalBundle;
-const BufferBundle = components.BufferBundle;
 
 pub const Buffer = components.Buffer;
 pub const Terminal = components.Terminal;
@@ -31,8 +27,8 @@ pub fn build(w: *World) void {
     _ = w
         .addResource(Style, .{ .font = font, .font_size = 20 })
         .addResource(State, .{})
-        .addSystem(.startup, spawn)
-        .addSystems(.update, .{
+        .addSystem(scheds.startup, spawn)
+        .addSystems(scheds.update, .{
         systems.input.execCmds,
         systems.status.inHover,
         systems.status.inWindowResizing,

@@ -1,6 +1,5 @@
 const std = @import("std");
 const common = @import("common.zig");
-const utils = @import("util.zig");
 const query_helper = @import("query.zig");
 
 const World = @import("World.zig");
@@ -29,7 +28,7 @@ pub fn spawn(self: Entity, components: anytype) Entity {
             .spawnEntity(components)
             .id;
 
-    try self.pushChildren(&[_]ID{child_id});
+    self.pushChildren(&[_]ID{child_id});
     return self;
 }
 
@@ -37,9 +36,9 @@ pub fn spawn(self: Entity, components: anytype) Entity {
 pub fn pushChildren(
     self: Entity,
     child_ids: []const ID,
-) !void {
+) void {
     for (child_ids) |c_id| {
-        try self
+        self
             .world
             .setComponent(self.id, common.Children, .{ .id = c_id });
     }
