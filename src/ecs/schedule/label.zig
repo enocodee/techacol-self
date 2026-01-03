@@ -1,11 +1,3 @@
-//! A namepsace that contains all thing related to `system`.
-//!
-//! Systems define how controlling elements (entity, component,
-//! resource, ...) in application.
-//!
-//! * Registry: where all systems are registered (stored).
-//! * Scheduler: decides which system is executed.
-//! * Executor: decides how system is executed.
 const std = @import("std");
 const World = @import("../World.zig");
 const System = @import("../system.zig").System;
