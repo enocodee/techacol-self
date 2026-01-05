@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title :text="$page.title" id="title"></title>
+
+		<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+	</head>
+	<body id="body">
+		<h2 class="text-[10px] text-gray-500">Last updated: <ctx :text="$page.date.format('January 02, 2006')"></ctx></h2>
+		<super>
+	</body>
+</html>
