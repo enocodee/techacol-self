@@ -7,8 +7,12 @@ pub const ComponentStorage = component.Storage;
 pub const World = @import("ecs/World.zig");
 pub const Entity = @import("ecs/Entity.zig");
 
+pub const SystemConfig = @import("ecs/system.zig").Config;
+
 pub const common = @import("ecs/common.zig");
 pub const CommonModule = common.CommonModule;
+
+pub const ui = @import("ecs/ui.zig");
 
 pub const query = struct {
     const _query = @import("ecs/query.zig");

@@ -14,6 +14,8 @@ pub const Graph = @import("schedule/Graph.zig");
 pub const Scheduler = @import("schedule/Scheduler.zig");
 
 /// All schedule labels are pre-defined in the `ecs`.
+///
+/// See `main_schedule_mod` for pre-customization of schedules.
 pub const schedules = struct {
     /// The schedule should be run first of all whenever
     /// frame begins.
@@ -79,5 +81,16 @@ pub const main_schedule_mod = struct {
             .addResource(MainScheduleOrder, .{})
             .addSystem(schedules.entry, run)
             .addSystem(schedules.last, endFrame);
+
+        const schedule_update_ptr =
+            w
+                .getSchedulePtr(schedules.update) catch
+                @panic("`update` schedule not found");
+
+        schedule_update_ptr.addSetWithConfig(
+            w.alloc,
+            @import("ui.zig").UiRenderSet,
+            .{ .after = &.{@import("common.zig").RenderSet} },
+        ) catch @panic("OOM");
     }
 };

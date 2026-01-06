@@ -9,6 +9,12 @@ const circle = @import("common/circle.zig");
 
 const schedules = @import("schedule.zig").schedules;
 
+pub const Set = @import("system.zig").Set;
+/// Set of all non-UI components
+///
+/// See `ui.UiRenderSet` for UI components
+pub const RenderSet = Set{ .name = "render" };
+
 // Shape components
 pub const Rectangle = rectangle.Rectangle;
 pub const Circle = circle.Circle;
