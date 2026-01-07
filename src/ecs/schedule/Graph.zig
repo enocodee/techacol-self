@@ -1,5 +1,8 @@
 //! The graph (directed acyclic) represents **systems** and **their dependencies**
 //! which are **their children**.
+//!
+//! NOTE: All dependencies of a target should exist after it, otherwise
+//! the `toposort()` may cause to unexpected behaviours.
 const std = @import("std");
 
 const ScheduleGraph = @This();
