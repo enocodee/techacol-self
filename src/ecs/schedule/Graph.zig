@@ -1,6 +1,7 @@
 //! The graph (directed acyclic) represents **systems** and **their dependencies**
 //! which are **their children**.
 //!
+// TODO: remove the note
 //! NOTE: All dependencies of a target should exist after it, otherwise
 //! the `toposort()` may cause to unexpected behaviours.
 const std = @import("std");
