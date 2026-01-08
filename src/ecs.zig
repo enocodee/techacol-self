@@ -20,6 +20,7 @@ pub const query = struct {
 
     // filter
     pub const With = _query.With;
+    pub const Without = _query.Without;
 
     pub const Resource = @import("ecs/resource.zig").Resource;
 };

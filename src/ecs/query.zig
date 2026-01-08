@@ -11,8 +11,13 @@ pub fn With(comptime types: []const type) type {
     return QueryFilter(.with, types);
 }
 
+pub fn Without(comptime types: []const type) type {
+    return QueryFilter(.without, types);
+}
+
 const QueryFilterKind = enum {
     with,
+    without,
 };
 
 pub fn QueryFilter(comptime kind: QueryFilterKind, comptime types: []const type) type {
@@ -35,7 +40,8 @@ fn isFilter(comptime T: type) bool {
     return @hasField(T, "_kind") and @FieldType(T, "_kind") == QueryFilterKind;
 }
 
-/// A wrapper for automatically querying a specified entity components.
+/// A wrapper for automatically querying a specified entity
+/// components that should be called in `system.toHandler`.
 pub fn Query(comptime types: []const type) type {
     comptime if (types.len <= 0)
         @compileError("Cannot use `Query` with empty arguments");
@@ -61,12 +67,15 @@ pub fn Query(comptime types: []const type) type {
         break :get_queried final_types;
     };
 
+    comptime var exclude_types: []const type = &[_]type{};
+
     // NOTE: flatten all types in the query filter to use in order to
     //       retrieve all entities IDs
     const flatten_type = comptime get_flatten: {
         var count_valid = 0;
         for (types) |T| {
             if (isFilter(T)) {
+                if (T.getKind() == .without) continue;
                 count_valid += T._types.len;
             } else {
                 count_valid += 1;
@@ -75,12 +84,16 @@ pub fn Query(comptime types: []const type) type {
 
         var final_types: [count_valid]type = undefined;
         var curr_i = 0;
-        for (types) |T| {
+        blk: for (types) |T| {
             if (isFilter(T)) {
                 switch (T.getKind()) {
                     .with => for (T._types) |FilterType| {
                         final_types[curr_i] = FilterType;
                         curr_i += 1;
+                    },
+                    .without => {
+                        exclude_types = exclude_types ++ T._types;
+                        break :blk;
                     },
                 }
             } else {
@@ -126,14 +139,29 @@ pub fn Query(comptime types: []const type) type {
         /// This function should be used in `systems` (called in every frame),
         /// so we can ensure that all allocated things will be freed at the
         /// end of the frame.
-        // TODO: query filter
+        ///
+        /// See `query.QueryFilter` for more details about the filters.
         pub fn query(self: *Self, w: World) QueryError!void {
             const alloc = w.arena.allocator();
             // Temporary list containing entity ids for each component storage
             var temp_list: std.ArrayList(EntityID) = .empty;
             const min_storage = try getKeysOfMinStorage(w, &flatten_type);
-            // init the result with the storage containing the fewest elements
-            var result_list: std.ArrayList(EntityID) = .fromOwnedSlice(min_storage.items);
+            // init the query list with the storage containing the fewest elements
+            var query_list: std.ArrayList(EntityID) = .fromOwnedSlice(min_storage.items);
+            // list containing all types whose all keys should not be queried
+            var exclude_list: std.AutoHashMap(EntityID, EntityID) = .init(w.arena.allocator());
+            var final_list: std.ArrayList(EntityID) = .empty;
+
+            inline for (exclude_types) |T| {
+                // use label to control flow in comptime
+                const Type = ecs_util.Deref(T);
+                const s = try ErasedComponentStorage.cast(w, Type);
+
+                var data_iter = s.data.keyIterator();
+                while (data_iter.next()) |it| {
+                    try exclude_list.put(it.*, it.*);
+                }
+            }
 
             inline for (flatten_type, 0..) |T, i| {
                 // use label to control flow in comptime
@@ -149,14 +177,20 @@ pub fn Query(comptime types: []const type) type {
                     while (data_iter.next()) |it| {
                         try temp_list.append(alloc, it.*);
                     }
-                    try findIdentical(alloc, &result_list, temp_list);
+                    try findIdentical(alloc, &query_list, temp_list);
 
                     // reset l1
                     temp_list.clearAndFree(alloc);
                 }
             }
 
-            self.result = try tuplesFromTypes(w, result_list.items, &queried_type);
+            for (query_list.items) |it| {
+                if (!exclude_list.contains(it)) {
+                    try final_list.append(alloc, it);
+                }
+            }
+
+            self.result = try tuplesFromTypes(w, final_list.items, &queried_type);
         }
 
         /// return the first result element
@@ -172,10 +206,10 @@ pub fn Query(comptime types: []const type) type {
 }
 
 /// Find all identical enittiy ids between `l1` and `l2`.
-/// The result will be written to l1 and the order of
+/// The result will be written to `l1` and the order of
 /// elements following `l1`.
 ///
-/// If one of lists is `null`, assign remaining value to `dest`.
+/// If one of lists is `null`, assign remaining value to `l1`.
 pub fn findIdentical(
     alloc: std.mem.Allocator,
     l1: *std.ArrayList(EntityID),
