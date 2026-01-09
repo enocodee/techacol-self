@@ -11,7 +11,7 @@ const UiStyle = @import("../ui.zig").components.UiStyle;
 pub fn QueryToRender(comptime types: []const type) type {
     const TypedQuery = Query(types ++ [_]type{Without(&.{UiStyle})});
     return struct {
-        result: TypedQuery.Result = &.{},
+        result: TypedQuery.Result = .{},
 
         const Self = @This();
 
@@ -32,12 +32,12 @@ pub fn QueryToRender(comptime types: []const type) type {
             }
         }
 
-        pub fn many(self: Self) TypedQuery.Result {
-            return self.result;
+        pub fn many(self: Self) []TypedQuery.Tuple {
+            return self.result.many();
         }
 
         pub fn single(self: Self) ?TypedQuery.Tuple {
-            return if (self.result.len <= 0) return null else return self.result[0];
+            return self.result.singleOrNull();
         }
     };
 }

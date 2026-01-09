@@ -105,10 +105,31 @@ pub fn Query(comptime types: []const type) type {
     };
 
     return struct {
-        result: []Tuple = &.{},
+        result: Result = .{},
 
-        pub const Result = []Tuple;
+        pub const Result = struct {
+            /// Contains all types ordered by `types` but
+            /// exclude all types inside `QueryFilter`.
+            tuples: []Tuple = &.{},
+
+            /// return the first result element
+            pub fn single(self: Result) Tuple {
+                return self.tuples[0];
+            }
+
+            // return all result elements
+            pub fn many(self: Result) []Tuple {
+                return self.tuples;
+            }
+
+            /// return the first result element
+            pub fn singleOrNull(self: Result) ?Tuple {
+                return if (self.tuples.len <= 0) null else self.tuples[0];
+            }
+        };
+
         pub const Tuple = std.meta.Tuple(&queried_type);
+
         const Self = @This();
 
         /// Fetch all entities that have **all** of the speicifed component types.
@@ -190,17 +211,17 @@ pub fn Query(comptime types: []const type) type {
                 }
             }
 
-            self.result = try tuplesFromTypes(w, final_list.items, &queried_type);
+            self.result.tuples = try tuplesFromTypes(w, final_list.items, &queried_type);
         }
 
         /// return the first result element
         pub fn single(self: Self) Tuple {
-            return self.result[0];
+            return self.result.single();
         }
 
         // return all result elements
         pub fn many(self: Self) []Tuple {
-            return self.result;
+            return self.result.many();
         }
     };
 }
