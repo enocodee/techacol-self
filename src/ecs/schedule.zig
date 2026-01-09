@@ -6,8 +6,12 @@
 //! * Scheduler
 //! * schedules
 //! * main_schedule_mod (used in `CommonModule`):
+//! * render_schedule_mod (used in `CommonModule`):
 const Resource = @import("resource.zig").Resource;
 const World = @import("World.zig");
+
+const UiRenderSet = @import("ui.zig").UiRenderSet;
+const RenderSet = @import("common.zig").RenderSet;
 
 pub const Label = @import("schedule/label.zig").Label;
 pub const Graph = @import("schedule/Graph.zig");
@@ -63,6 +67,17 @@ fn endFrame(w: *World) !void {
     // reset the short-lived allocator
     _ = w.arena.reset(.free_all);
 }
+
+pub const render_schedule_mod = struct {
+    pub fn build(w: *World) void {
+        _ = w
+            .configureSet(
+            schedules.update,
+            UiRenderSet,
+            .{ .after = &.{RenderSet} },
+        );
+    }
+};
 
 /// A standard schedule pre-defined in the application.
 /// # Orders:
