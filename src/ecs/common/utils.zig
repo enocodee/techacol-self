@@ -1,6 +1,6 @@
 const Query = @import("../query.zig").Query;
 const World = @import("../World.zig");
-const Without = @import("../query.zig").Without;
+const Without = @import("../query.zig").filter.Without;
 const UiStyle = @import("../ui.zig").components.UiStyle;
 
 /// A wrapper for automatically querying a specified
