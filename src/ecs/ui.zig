@@ -56,5 +56,10 @@ fn render(queries: QueryUiToRender) !void {
 }
 
 pub fn build(w: *World) void {
-    _ = w.addSystemWithConfig(scheds.update, render, .{ .in_sets = &.{UiRenderSet} });
+    _ = w.addSystemWithConfig(
+        .render,
+        scheds.update,
+        render,
+        .{ .in_sets = &.{UiRenderSet} },
+    );
 }

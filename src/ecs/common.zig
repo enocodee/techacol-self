@@ -43,7 +43,7 @@ pub const CommonModule = struct {
             .addModules(&.{
                 @import("ui.zig"),
             })
-            .addSystemsWithConfig(schedules.update, .{
+            .addSystemsWithConfig(.render, schedules.update, .{
             rectangle.render,
             grid.render,
             circle.render,

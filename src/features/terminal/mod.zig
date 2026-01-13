@@ -29,8 +29,8 @@ pub fn build(w: *World) void {
     _ = w
         .addResource(Style, .{ .font = font, .font_size = 20 })
         .addResource(State, .{})
-        .addSystem(scheds.startup, spawn)
-        .addSystems(scheds.update, .{
+        .addSystem(.system, scheds.startup, spawn)
+        .addSystems(.system, scheds.update, .{
             systems.input.execCmds,
             systems.status.inHover,
             systems.status.inWindowResizing,
@@ -38,6 +38,7 @@ pub fn build(w: *World) void {
             systems.status.inClickedRun,
             systems.status.inCmdRunning,
         }).addSystemWithConfig(
+        .render,
         scheds.update,
         systems.render.render,
         .{ .in_sets = &.{ecs_ui.UiRenderSet} },

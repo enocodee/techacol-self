@@ -7,6 +7,7 @@
 //! * schedules
 //! * main_schedule_mod (used in `CommonModule`):
 //! * render_schedule_mod (used in `CommonModule`):
+const rl = @import("raylib");
 const Resource = @import("resource.zig").Resource;
 const World = @import("World.zig");
 
@@ -44,6 +45,18 @@ const MainScheduleOrder = struct {
     is_run_once: bool = false,
 };
 
+fn render(w: *World) !void {
+    rl.beginDrawing();
+    defer {
+        rl.clearBackground(.white);
+        rl.endDrawing();
+    }
+
+    try w
+        .render_scheduler
+        .runSchedule(w.alloc, w, schedules.update);
+}
+
 fn run(w: *World, orders_res: Resource(*MainScheduleOrder)) !void {
     const orders = orders_res.result;
     if (!orders.is_run_once) {
@@ -66,11 +79,14 @@ fn endFrame(w: *World) !void {
 pub const render_schedule_mod = struct {
     pub fn build(w: *World) void {
         _ = w
+            .addSchedule(.render, schedules.update)
             .configureSet(
-            schedules.update,
-            UiRenderSet,
-            .{ .after = &.{RenderSet} },
-        );
+                .render,
+                schedules.update,
+                UiRenderSet,
+                .{ .after = &.{RenderSet} },
+            )
+            .addSystem(.render, Scheduler.entry, render);
     }
 };
 
@@ -85,11 +101,11 @@ pub const render_schedule_mod = struct {
 pub const main_schedule_mod = struct {
     pub fn build(w: *@import("World.zig")) void {
         _ = w
-            .addSchedule(schedules.startup)
-            .addSchedule(schedules.update)
-            .addSchedule(schedules.deinit)
+            .addSchedule(.system, schedules.startup)
+            .addSchedule(.system, schedules.update)
+            .addSchedule(.system, schedules.deinit)
             .addResource(MainScheduleOrder, .{})
-            .addSystem(Scheduler.entry, run)
-            .addSystem(schedules.deinit, endFrame);
+            .addSystem(.system, Scheduler.entry, run)
+            .addSystem(.system, schedules.deinit, endFrame);
     }
 };
