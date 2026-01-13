@@ -1,12 +1,7 @@
-const rl = @import("raylib");
 const components = @import("../ui.zig").components;
 
 const World = @import("../World.zig");
 const Query = @import("../query.zig").Query;
-const UiStyle = @import("../ui.zig").components.UiStyle;
-
-const UiRenderSet = @import("../ui.zig").UiRenderSet;
-const RenderSet = @import("../common.zig").RenderSet;
 
 pub const QueryUiToRender = struct {
     const TypedQuery = Query(&[_]type{components.UiStyle});
@@ -39,23 +34,3 @@ pub const QueryUiToRender = struct {
         return self.result.singleOrNull();
     }
 };
-
-fn render(queries: QueryUiToRender) void {
-    for (queries.many()) |q| {
-        const ui_style: UiStyle = q[0];
-
-        rl.drawRectangle(
-            ui_style.pos.x,
-            ui_style.pos.y,
-            ui_style.width,
-            ui_style.width,
-            ui_style.bg_color,
-        );
-    }
-}
-
-pub fn build(w: *World) void {
-    _ = w
-        .configureSet(.update, UiRenderSet, .{ .after = RenderSet })
-        .addSystemWithConfig(.update, render, .{ .in_sets = UiRenderSet });
-}
