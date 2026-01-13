@@ -3,6 +3,7 @@
 //! TODO: Graph cache for schedules (notify when it need to be reset via `Event`)
 const std = @import("std");
 const ScheduleLabel = @import("label.zig").Label;
+const System = @import("../system.zig").System;
 
 const Scheduler = @This();
 
@@ -81,12 +82,27 @@ pub fn getLabelPtr(
 
 pub fn addSystem(
     self: *Scheduler,
-    schedule_label: @TypeOf(.enum_literal),
+    alloc: std.mem.Allocator,
+    schedule_label: ScheduleLabel,
     comptime system_fn: anytype,
 ) void {
     const label = self.getLabelPtr(
-        @tagName(schedule_label),
-    ) orelse @panic("schedule not found"); // NOTE: this is intended :)
+        schedule_label,
+    ) catch @panic("schedule not found"); // NOTE: this is intended :)
 
-    label.addSystemWithConfig(self.alloc, system_fn) catch @panic("OOM");
+    label.addSystem(alloc, System.fromFn(system_fn)) catch @panic("OOM");
+}
+
+pub fn addSystemWithConfig(
+    self: *Scheduler,
+    alloc: std.mem.Allocator,
+    schedule_label: ScheduleLabel,
+    comptime system_fn: anytype,
+    comptime config: System.Config,
+) void {
+    const label = self.getLabelPtr(
+        schedule_label,
+    ) catch @panic("schedule not found"); // NOTE: this is intended :)
+
+    label.addSystemWithConfig(alloc, System.fromFn(system_fn), config) catch @panic("OOM");
 }
