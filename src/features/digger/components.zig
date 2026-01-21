@@ -1,4 +1,4 @@
-const ecs_common = @import("ecs").common;
+const ecs_common = @import("eno").common;
 
 pub const DiggerBundle = struct {
     digger: Digger,

@@ -1,13 +1,17 @@
 .{
-    .name = .digger_replace,
-    .version = "0.0.1",
+    .name = .techacol,
+    .version = "0.0.0-beta",
     .dependencies = .{
         .raylib_zig = .{
             .url = "git+https://github.com/raylib-zig/raylib-zig?ref=devel#163b1ef2e993fe7cc7c76bb3213d98612f4b7676",
             .hash = "raylib_zig-5.6.0-dev-KE8REGNJBQDSjjyCmf4ATVQtk_OaBpY0B7kBxwSOPEGZ",
         },
+        .enogine = .{
+            .url = "git+https://github.com/enocodee/eno?ref=ecs/common/exports#9110239dc2cb243a237a63b379dcc3f6ba7269e0",
+            .hash = "enogine-0.0.0-YBWrW2doAQCMdhrks9PcVQc1Hvr6EgJhpP7-fs8_Kodl",
+        },
     },
     .minimum_zig_version = "0.15.1",
     .paths = .{""},
-    .fingerprint = 0x1ce59149c793868b,
+    .fingerprint = 0xdcfedd3d0d66fd02,
 }

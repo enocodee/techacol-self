@@ -13,14 +13,7 @@ pub fn build(b: *std.Build) void {
     const raygui = raylib_dep.module("raygui");
     const raylib_artifact = raylib_dep.artifact("raylib");
 
-    const ecs_mod = b.addModule("ecs", .{
-        .root_source_file = b.path("src/ecs.zig"),
-        .target = t,
-        .optimize = o,
-        .imports = &.{
-            .{ .name = "raylib", .module = raylib },
-        },
-    });
+    const eno = b.dependency("enogine", .{}).module("eno");
 
     {
         const exe = b.addExecutable(.{
@@ -31,7 +24,7 @@ pub fn build(b: *std.Build) void {
                 .optimize = o,
             }),
         });
-        exe.root_module.addImport("ecs", ecs_mod);
+        exe.root_module.addImport("eno", eno);
         b.installArtifact(exe);
 
         const run_step = b.step("run", "Run the application");
@@ -60,7 +53,7 @@ pub fn build(b: *std.Build) void {
         test_exe.root_module.addImport("raylib", raylib);
         test_exe.root_module.addImport("raygui", raygui);
 
-        test_exe.root_module.addImport("ecs", ecs_mod);
+        test_exe.root_module.addImport("eno", eno);
         run_test_step.dependOn(&run_test.step);
     }
 

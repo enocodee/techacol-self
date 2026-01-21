@@ -1,7 +1,7 @@
 const systems = @import("systems.zig");
-const scheds = @import("ecs").schedules;
+const scheds = @import("eno").common.schedules;
 
-const World = @import("ecs").World;
+const World = @import("eno").ecs.World;
 
 const DiggerBundle = @import("components.zig").DiggerBundle;
 pub const Digger = @import("components.zig").Digger;

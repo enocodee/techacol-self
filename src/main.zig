@@ -1,6 +1,8 @@
 const std = @import("std");
 const rl = @import("raylib");
-const schedules = @import("ecs").schedules;
+const schedules = @import("eno").common.schedules;
+const eno = @import("eno");
+const ecs = eno.ecs;
 
 const digger_mod = @import("features/digger/mod.zig");
 const area_mod = @import("features/area/mod.zig");
@@ -8,9 +10,7 @@ const terminal_mod = @import("features/terminal/mod.zig");
 const debug_mod = @import("features/debug/mod.zig");
 const score_mod = @import("features/score/mod.zig");
 
-const ecs = @import("ecs");
 const World = ecs.World;
-
 const GameAssets = @import("GameAssets.zig");
 
 fn closeWindow(w: *World) !void {
@@ -26,7 +26,7 @@ fn loop(alloc: std.mem.Allocator) !void {
     rl.setTargetFPS(60);
 
     try world
-        .addModules(&.{ecs.CommonModule})
+        .addModules(&.{eno.common.CommonModule})
         .addResource(GameAssets, .{})
         .addSystems(.system, schedules.update, &.{closeWindow})
         .addModules(&.{

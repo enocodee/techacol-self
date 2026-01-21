@@ -1,5 +1,5 @@
 const std = @import("std");
-const ecs = @import("ecs");
+const ecs = @import("eno").ecs;
 const components = @import("components.zig");
 
 const Score = @import("../score/mod.zig").Score;

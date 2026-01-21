@@ -3,8 +3,8 @@ const rl = @import("raylib");
 
 const utils = @import("utils.zig");
 
-const ecs_common = @import("ecs").common;
-const Grid = ecs_common.Grid;
+const eno_common = @import("eno").common;
+const Grid = eno_common.Grid;
 const State = @import("resources.zig").State;
 const Style = @import("resources.zig").Style;
 
@@ -76,7 +76,7 @@ pub const Buffer = struct {
 
                 const pos = grid.matrix[try grid.getActualIndex(row_in_grid, col_in_grid)];
 
-                rl.drawTextEx(
+                eno_common.raylib.drawTextEx(
                     style.font,
                     rl.textFormat("%c", .{c}),
                     .init(
