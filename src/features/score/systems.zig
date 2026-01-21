@@ -1,12 +1,12 @@
-const ecs = @import("ecs");
-const ecs_common = ecs.common;
+const ecs = @import("eno").ecs;
+const eno_common = @import("eno").common;
 
 const World = ecs.World;
 const Query = ecs.query.Query;
 const Resource = ecs.query.Resource;
-const Position = ecs_common.Position;
-const Grid = ecs_common.Grid;
-const InGrid = ecs_common.InGrid;
+const Position = eno_common.Position;
+const Grid = eno_common.Grid;
+const InGrid = eno_common.InGrid;
 
 const Point = @import("components.zig").Point;
 const Score = @import("mod.zig").Score;

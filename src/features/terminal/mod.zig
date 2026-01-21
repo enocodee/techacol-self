@@ -1,17 +1,18 @@
-const rl = @import("raylib");
-const ecs_common = @import("ecs").common;
-const ecs_ui = @import("ecs").ui;
-const scheds = @import("ecs").schedules;
+const rl = @import("eno").common.raylib;
+const ecs = @import("eno").ecs;
+const eno_common = @import("eno").common;
+const eno_ui = @import("eno").ui;
+const scheds = eno_common.schedules;
 const resources = @import("resources.zig");
 const systems = @import("systems.zig");
 const components = @import("components.zig");
 
-const World = @import("ecs").World;
-const Resourse = @import("ecs").query.Resource;
-const Grid = ecs_common.Grid;
+const World = ecs.World;
+const Resourse = ecs.query.Resource;
+const Grid = eno_common.Grid;
 const State = resources.State;
 const Style = resources.Style;
-const UiStyle = ecs_ui.components.UiStyle;
+const UiStyle = eno_ui.components.Style;
 
 const GameAssets = @import("../../GameAssets.zig");
 const Executor = @import("../command_executor/mod.zig").CommandExecutor;
@@ -41,13 +42,13 @@ pub fn build(w: *World) void {
         .render,
         scheds.update,
         systems.render.render,
-        .{ .in_sets = &.{ecs_ui.UiRenderSet} },
+        .{ .in_sets = &.{eno_ui.UiRenderSet} },
     );
 }
 
 pub fn spawn(w: *World, res_style: Resourse(Style)) !void {
     const style = res_style.result;
-    const measure_font = rl.measureTextEx(
+    const measure_font = eno_common.raylib.measureTextEx(
         style.font,
         "a",
         @floatFromInt(style.font_size),
@@ -80,7 +81,7 @@ pub fn spawn(w: *World, res_style: Resourse(Style)) !void {
             .executor = Executor.init(w.alloc),
         },
     }).withChildren(struct {
-        pub fn cb(parent: @import("ecs").Entity) !void {
+        pub fn cb(parent: @import("eno").ecs.Entity) !void {
             const s = try parent.world.getResource(Style);
 
             _ = parent.spawn(.{

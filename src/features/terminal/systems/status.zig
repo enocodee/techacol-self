@@ -1,23 +1,23 @@
 const std = @import("std");
-const rl = @import("raylib");
 const resource = @import("../resources.zig");
-const ecs = @import("ecs");
-const ecs_ui = @import("ecs").ui;
-const ecs_common = ecs.common;
+const ecs = @import("eno").ecs;
+const eno_ui = @import("eno").ui;
+const eno_common = @import("eno").common;
+const rl = eno_common.raylib;
 const input = @import("input.zig");
 
 const Query = ecs.query.Query;
 const With = ecs.query.With;
 const Resource = ecs.query.Resource;
 const World = ecs.World;
-const UiStyle = ecs_ui.components.UiStyle;
+const UiStyle = eno_ui.components.Style;
 const Terminal = @import("../mod.zig").Terminal;
 const RunButton = @import("../mod.zig").RunButton;
 const Buffer = @import("../mod.zig").Buffer;
 const Executor = @import("../../command_executor/mod.zig").CommandExecutor;
 
-const Children = ecs_common.Children;
-const Grid = ecs_common.Grid;
+const Children = ecs.hierarchy.Children;
+const Grid = eno_common.Grid;
 
 const State = resource.State;
 

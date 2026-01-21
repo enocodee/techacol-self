@@ -1,15 +1,15 @@
-const ecs = @import("ecs");
-const ecs_common = ecs.common;
-const scheds = ecs.schedules;
+const ecs = @import("eno").ecs;
+const eno_common = @import("eno").common;
+const scheds = eno_common.schedules;
 
 const systems = @import("systems.zig");
 
 const area = @import("../area/mod.zig");
 
-const Position = ecs_common.Position;
-const Circle = ecs_common.Circle;
-const InGrid = ecs_common.InGrid;
-const Grid = ecs_common.Grid;
+const Position = eno_common.Position;
+const Circle = eno_common.Circle;
+const InGrid = eno_common.InGrid;
+const Grid = eno_common.Grid;
 const World = ecs.World;
 const SystemSet = ecs.system.Set;
 

@@ -1,9 +1,12 @@
 const std = @import("std");
-const scheds = @import("ecs").schedules;
+const eno = @import("eno");
+const ecs = eno.ecs;
+const eno_common = eno.common;
+const scheds = eno_common.schedules;
 
-const SystemSet = @import("ecs").system.Set;
-const Grid = @import("ecs").common.Grid;
-const World = @import("ecs").World;
+const SystemSet = ecs.system.Set;
+const Grid = eno_common.Grid;
+const World = ecs.World;
 
 const Area = @import("components.zig").Area;
 

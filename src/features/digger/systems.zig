@@ -1,5 +1,5 @@
-const ecs = @import("ecs");
-const ecs_common = ecs.common;
+const ecs = @import("eno").ecs;
+const ecs_common = @import("eno").common;
 
 const World = ecs.World;
 const Query = ecs.query.Query;

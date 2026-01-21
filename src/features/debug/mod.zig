@@ -1,10 +1,11 @@
 // TODO: Move this to `ecs.common`
-const rl = @import("raylib");
-const scheds = @import("ecs").schedules;
+const rl = @import("eno").common.raylib;
+const eno = @import("eno");
+const scheds = eno.common.schedules;
 const systems = @import("systems.zig");
 const components = @import("components.zig");
 
-const World = @import("ecs").World;
+const World = eno.ecs.World;
 const Box = components.DebugBox;
 const Info = components.DebugInfo;
 
@@ -18,7 +19,7 @@ pub fn build(w: *World) void {
         .render,
         scheds.update,
         systems.render,
-        .{ .in_sets = &.{@import("ecs").ui.UiRenderSet} },
+        .{ .in_sets = &.{@import("eno").ui.UiRenderSet} },
     );
 }
 

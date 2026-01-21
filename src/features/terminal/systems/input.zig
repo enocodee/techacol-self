@@ -1,15 +1,15 @@
 const std = @import("std");
-const rl = @import("raylib");
-const ecs = @import("ecs");
+const rl = @import("eno").common.raylib;
+const ecs = @import("eno").ecs;
 
 const Terminal = @import("../mod.zig").Terminal;
 const Buffer = @import("../mod.zig").Buffer;
 const Executor = @import("../../command_executor/mod.zig").CommandExecutor;
 const Interpreter = @import("../../interpreter/Interpreter.zig");
 const Query = ecs.query.Query;
-const World = @import("ecs").World;
-const With = @import("ecs").query.With;
-const Grid = @import("ecs").common.Grid;
+const World = ecs.World;
+const With = ecs.query.With;
+const Grid = @import("eno").common.Grid;
 
 /// Running all available cmds in queue
 pub fn execCmds(

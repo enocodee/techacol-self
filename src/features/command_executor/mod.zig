@@ -1,6 +1,6 @@
 const std = @import("std");
-const World = @import("ecs").World;
-const QueryError = @import("ecs").query.QueryError;
+const World = @import("eno").ecs.World;
+const QueryError = @import("eno").ecs.query.QueryError;
 const Command = @import("../interpreter/command.zig").Command;
 
 const digger = @import("../digger/mod.zig");

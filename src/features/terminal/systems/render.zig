@@ -1,8 +1,8 @@
-const rl = @import("raylib");
-const rg = @import("raygui");
-const ecs = @import("ecs");
-const ecs_ui = @import("ecs").ui;
-const ecs_common = ecs.common;
+const rl = @import("eno").common.raylib;
+const rg = @import("eno").common.raygui;
+const ecs = @import("eno").ecs;
+const eno_ui = @import("eno").ui;
+const eno_common = @import("eno").common;
 const resource = @import("../resources.zig");
 
 const Terminal = @import("../mod.zig").Terminal;
@@ -11,10 +11,10 @@ const Buffer = @import("../mod.zig").Buffer;
 const Query = ecs.query.Query;
 const With = ecs.query.With;
 const Resource = ecs.query.Resource;
-const UiStyle = ecs_ui.components.UiStyle;
-const Grid = @import("ecs").common.Grid;
-const Rectangle = ecs_common.Rectangle;
-const Position = ecs_common.Position;
+const UiStyle = eno_ui.components.Style;
+const Grid = eno_common.Grid;
+const Rectangle = eno_common.Rectangle;
+const Position = eno_common.Position;
 
 const Style = resource.Style;
 const State = resource.State;

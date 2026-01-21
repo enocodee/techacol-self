@@ -1,8 +1,9 @@
-const ecs_common = @import("ecs").common;
+const eno = @import("eno");
+const eno_common = eno.common;
 
-const World = @import("ecs").World;
-const Grid = ecs_common.Grid;
-const InGrid = ecs_common.InGrid;
+const World = eno.ecs.World;
+const InGrid = eno_common.InGrid;
+const Grid = eno_common.Grid;
 
 const Digger = @import("../components.zig").Digger;
 
