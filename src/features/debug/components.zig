@@ -1,4 +1,4 @@
-const rl = @import("raylib");
+const rl = @import("eno").common.raylib;
 
 pub const DebugInfo = struct {
     score: i32 = 0,

@@ -1,5 +1,5 @@
 const std = @import("std");
-const rl = @import("raylib");
+const rl = @import("eno").common.raylib;
 const ecs = @import("eno").ecs;
 
 const Terminal = @import("../mod.zig").Terminal;

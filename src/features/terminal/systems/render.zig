@@ -1,5 +1,5 @@
-const rl = @import("raylib");
-const rg = @import("raygui");
+const rl = @import("eno").common.raylib;
+const rg = @import("eno").common.raygui;
 const ecs = @import("eno").ecs;
 const eno_ui = @import("eno").ui;
 const eno_common = @import("eno").common;

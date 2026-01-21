@@ -1,5 +1,5 @@
 // TODO: Move this to `ecs.common`
-const rl = @import("raylib");
+const rl = @import("eno").common.raylib;
 const eno = @import("eno");
 const scheds = eno.common.schedules;
 const systems = @import("systems.zig");

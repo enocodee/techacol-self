@@ -1,5 +1,4 @@
 const std = @import("std");
-const rl = @import("raylib");
 const schedules = @import("eno").common.schedules;
 const eno = @import("eno");
 const ecs = eno.ecs;
@@ -9,12 +8,13 @@ const area_mod = @import("features/area/mod.zig");
 const terminal_mod = @import("features/terminal/mod.zig");
 const debug_mod = @import("features/debug/mod.zig");
 const score_mod = @import("features/score/mod.zig");
+const rl = eno.common.raylib;
 
 const World = ecs.World;
 const GameAssets = @import("GameAssets.zig");
 
 fn closeWindow(w: *World) !void {
-    if (rl.windowShouldClose()) {
+    if (eno.window.shouldClose()) {
         w.should_exit = true;
     }
 }

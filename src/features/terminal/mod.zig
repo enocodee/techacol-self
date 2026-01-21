@@ -1,4 +1,4 @@
-const rl = @import("raylib");
+const rl = @import("eno").common.raylib;
 const ecs = @import("eno").ecs;
 const eno_common = @import("eno").common;
 const eno_ui = @import("eno").ui;
