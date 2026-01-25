@@ -1,0 +1,1 @@
+- Each weapon will have its own skill tree. (Refer to Veloren)

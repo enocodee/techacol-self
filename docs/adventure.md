@@ -1,0 +1,1 @@
+- The idea map is similar to the map in Swort Art Online. (includes multiple floors, various monter and animal depending on each floor). **(core)**
