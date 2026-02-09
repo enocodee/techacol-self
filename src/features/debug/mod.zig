@@ -19,7 +19,7 @@ pub fn build(w: *World) void {
         .render,
         scheds.update,
         systems.render,
-        .{ .in_sets = &.{@import("eno").ui.UiRenderSet} },
+        .{ .in_sets = &.{@import("eno").render.UiRenderSet} },
     );
 }
 

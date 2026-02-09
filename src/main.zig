@@ -3,11 +3,9 @@ const schedules = @import("eno").common.schedules;
 const eno = @import("eno");
 const ecs = eno.ecs;
 
-const digger_mod = @import("features/digger/mod.zig");
-const area_mod = @import("features/area/mod.zig");
-const terminal_mod = @import("features/terminal/mod.zig");
 const debug_mod = @import("features/debug/mod.zig");
-const score_mod = @import("features/score/mod.zig");
+const map_mod = @import("features/map/mod.zig");
+const player_mod = @import("features/player/mod.zig");
 const rl = eno.common.raylib;
 
 const World = ecs.World;
@@ -30,10 +28,8 @@ fn loop(alloc: std.mem.Allocator) !void {
         .addResource(GameAssets, .{})
         .addSystems(.system, schedules.update, &.{closeWindow})
         .addModules(&.{
-            area_mod,
-            terminal_mod,
-            digger_mod,
-            score_mod,
+            map_mod,
+            player_mod,
             debug_mod,
         })
         .run();

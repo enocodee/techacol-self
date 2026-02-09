@@ -1,1 +1,0 @@
-pub const Area = struct {};

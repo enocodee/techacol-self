@@ -22,10 +22,7 @@ pub const Command = union(enum) {
     end_loop: void,
 
     // --- Commands in game ---
-    /// Move the digger in the specified direction.
-    move: @import("../digger/mod.zig").move.MoveDirection,
-    /// Check if the specified direction is an edge.
-    isEdge: @import("../digger/mod.zig").check.EdgeDirection,
+    // TODO:
 
     /// The condition expressions
     pub const CondExpr = union(enum) {
