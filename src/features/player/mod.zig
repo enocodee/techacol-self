@@ -1,4 +1,5 @@
-const eno = @import("eno");
+const std = @import("std");
+pub const eno = @import("eno");
 const common = eno.common;
 const rl = common.raylib;
 const scheds = common.schedules;
@@ -45,6 +46,11 @@ fn updateCam(
 ) !void {
     const cam, const transform = player_q.single();
     cam.target = .init(@floatFromInt(transform.x), @floatFromInt(transform.y));
+
+    if (rl.isKeyPressed(.equal) and rl.isKeyDown(.left_control))
+        cam.zoom += 0.2;
+    if (rl.isKeyPressed(.minus) and rl.isKeyDown(.left_control))
+        cam.zoom -= 0.2;
 }
 
 fn movement(

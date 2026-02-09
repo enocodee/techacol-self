@@ -6,6 +6,7 @@ const ecs = eno.ecs;
 const debug_mod = @import("features/debug/mod.zig");
 const map_mod = @import("features/map/mod.zig");
 const player_mod = @import("features/player/mod.zig");
+const monster_mod = @import("features/monster/mod.zig");
 const rl = eno.common.raylib;
 
 const World = ecs.World;
@@ -28,6 +29,7 @@ fn loop(alloc: std.mem.Allocator) !void {
         .addResource(GameAssets, .{})
         .addSystems(.system, schedules.update, &.{closeWindow})
         .addModules(&.{
+            monster_mod,
             map_mod,
             player_mod,
             debug_mod,
