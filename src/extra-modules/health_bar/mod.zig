@@ -8,8 +8,8 @@ const World = ecs.World;
 const Query = ecs.query.Query;
 const Transform = common.Transform;
 
-/// This component should be spawned as a separate
-/// entity with the owner.
+/// This component should be spawned as a children
+/// entity of the owner.
 ///
 /// See `HealthBarTarget` for details about attaching
 /// to the owner.
@@ -18,10 +18,17 @@ const Transform = common.Transform;
 /// ```zig
 /// const Player = struct {};
 ///
-/// world.spawnEntity(&.{
+/// try world.spawnEntity(&.{
 ///     Player {},
-///     HealthBarTarget,
-/// });
+/// }).withChildren(struct {
+///     pub fn callback(parent: eno.ecs.Entity) !void {
+///         const entity = parent.spawn(&.{
+///             try HealthBarBundle.init(parent.world.alloc, 100, .init(10, 10)),
+///         });
+///
+///         _ = parent.setComponent(HealthBarTarget, .{ .hb_id = entity.id });
+///     }
+/// }.callback);
 /// ```
 pub const HealthBar = struct {
     max_value: i32,
@@ -38,6 +45,8 @@ pub const HealthBar = struct {
 /// The entity which uses `HealthBar` component must be
 /// spawned with this component to determine who owns the
 /// health bar.
+///
+/// See `HealthBar` for more details.
 pub const HealthBarTarget = struct {
     hb_id: ecs.Entity.ID,
 };
@@ -59,7 +68,6 @@ pub const HealthBarBundle = struct {
     pub fn init(
         alloc: std.mem.Allocator,
         max_value: i32,
-        /// offset from the attached entity
         offset: Offset,
     ) !HealthBarBundle {
         return .{
