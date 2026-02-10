@@ -9,11 +9,16 @@ const Query = eno.ecs.query.Query;
 const World = eno.ecs.World;
 const Transform = common.Transform;
 
+const health_bar = @import("extra_modules").health_bar;
+const HealthBarBundle = health_bar.HealthBarBundle;
+const HealthBarTarget = health_bar.HealthBarTarget;
+
 const map = @import("../map/mod.zig");
 
 const Map = map.Map;
 const SpawnMap = map.SpawnMap;
 const SpawnMonster = eno.ecs.system.Set{ .name = "spawn_monster" };
+const Monster = struct {};
 
 const NUM_OF_MONSTERS = 10;
 
@@ -25,18 +30,16 @@ pub fn build(w: *World) void {
             SpawnMonster,
             .{ .after = &.{SpawnMap} },
         )
-        .addSystemWithConfig(
-        .system,
-        scheds.startup,
-        spawn,
-        .{ .in_sets = &.{SpawnMonster} },
-    );
+        .addSystemWithConfig(.system, scheds.startup, spawn, .{ .in_sets = &.{SpawnMonster} })
+    //.addSystem(.system, scheds.update, movement)
+    ;
 }
 
 fn randomPos(
     x_max: i32,
     y_max: i32,
 ) !struct { x: i32, y: i32 } {
+    // SAFETY: assigned in getrandom()
     var buffer_seed: u8 = undefined;
     try std.posix.getrandom(std.mem.asBytes(&buffer_seed));
     var rand = std.Random.DefaultPrng.init(buffer_seed);
@@ -56,9 +59,22 @@ fn spawn(
 
     for (0..NUM_OF_MONSTERS) |_| {
         const pos = try randomPos(map_tex.width, map_tex.height);
-        _ = w.spawnEntity(&.{
+
+        try w.spawnEntity(&.{
             try common.Texture2D.fromImage(crab_img),
             Transform.fromXYZ(pos.x, pos.y, 1),
-        });
+            Monster{},
+        }).withChildren(struct {
+            pub fn cb(parent: eno.ecs.Entity) !void {
+                const entity = parent.spawn(&.{
+                    try HealthBarBundle.init(parent.world.alloc, 100, .init(10, 10)),
+                });
+
+                _ = parent.setComponent(HealthBarTarget, .{ .hb_id = entity.id });
+            }
+        }.cb);
     }
 }
+
+// TODO:
+// fn movement(monster_q: Query(&.{ *Transform, With(&.{Monster}) })) !void {}
