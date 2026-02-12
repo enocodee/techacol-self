@@ -3,6 +3,7 @@ const eno = @import("eno");
 const common = eno.common;
 const rl = common.raylib;
 const scheds = common.schedules;
+const grid_collision = @import("extra_modules").grid_collision;
 
 const With = eno.ecs.query.With;
 const Query = eno.ecs.query.Query;
@@ -18,9 +19,23 @@ const map = @import("../map/mod.zig");
 const Map = map.Map;
 const SpawnMap = map.SpawnMap;
 const SpawnMonster = eno.ecs.system.Set{ .name = "spawn_monster" };
-const Monster = struct {};
 
+const Monster = struct {
+    direction: Direction = .up,
+
+    pub const Direction = enum {
+        up,
+        up_left,
+        up_right,
+        down,
+        down_left,
+        down_right,
+        left,
+        right,
+    };
+};
 const NUM_OF_MONSTERS = 10;
+const VELOCITY = 5;
 
 pub fn build(w: *World) void {
     _ = w
@@ -31,8 +46,7 @@ pub fn build(w: *World) void {
             .{ .after = &.{SpawnMap} },
         )
         .addSystemWithConfig(.system, scheds.startup, spawn, .{ .in_sets = &.{SpawnMonster} })
-    //.addSystem(.system, scheds.update, movement)
-    ;
+        .addSystem(.system, scheds.update, movement);
 }
 
 fn randomPos(
@@ -77,4 +91,153 @@ fn spawn(
 }
 
 // TODO:
-// fn movement(monster_q: Query(&.{ *Transform, With(&.{Monster}) })) !void {}
+fn movement(
+    w: *World,
+    monster_q: Query(&.{ *Transform, rl.Texture2D, *Monster }),
+    map_q: Query(&.{ common.InGrid, With(&.{Map}) }),
+) !void {
+    for (monster_q.many()) |query| {
+        const monster_transform: *Transform = query[0];
+        const monster_tex: rl.Texture2D = query[1];
+        const monster: *Monster = query[2];
+
+        const map_grid: common.Grid =
+            (try w
+                .entity(map_q.single()[0].grid_entity)
+                .getComponents(&.{common.Grid}))[0];
+
+        switch (monster.direction) {
+            .up => {
+                if (try grid_collision.getDirectedBlock(
+                    monster_tex,
+                    monster_transform.*,
+                    map_grid,
+                    .up,
+                )) {
+                    monster.direction = try randomToggleDirection(.up);
+                    continue;
+                }
+                monster_transform.y -= VELOCITY;
+            },
+            .up_left => {
+                if (try grid_collision.getDirectedBlock(
+                    monster_tex,
+                    monster_transform.*,
+                    map_grid,
+                    .up,
+                ) or try grid_collision.getDirectedBlock(
+                    monster_tex,
+                    monster_transform.*,
+                    map_grid,
+                    .left,
+                )) {
+                    monster.direction = try randomToggleDirection(.up_left);
+                    continue;
+                }
+                monster_transform.x -= VELOCITY;
+                monster_transform.y -= VELOCITY;
+            },
+            .up_right => {
+                if (try grid_collision.getDirectedBlock(
+                    monster_tex,
+                    monster_transform.*,
+                    map_grid,
+                    .up,
+                ) or try grid_collision.getDirectedBlock(
+                    monster_tex,
+                    monster_transform.*,
+                    map_grid,
+                    .right,
+                )) {
+                    monster.direction = try randomToggleDirection(.up_left);
+                    continue;
+                }
+                monster_transform.x += VELOCITY;
+                monster_transform.y -= VELOCITY;
+            },
+            .down => {
+                if (try grid_collision.getDirectedBlock(
+                    monster_tex,
+                    monster_transform.*,
+                    map_grid,
+                    .down,
+                )) {
+                    monster.direction = try randomToggleDirection(.down);
+                    continue;
+                }
+                monster_transform.y += VELOCITY;
+            },
+            .down_left => {
+                if (try grid_collision.getDirectedBlock(
+                    monster_tex,
+                    monster_transform.*,
+                    map_grid,
+                    .down,
+                ) or try grid_collision.getDirectedBlock(
+                    monster_tex,
+                    monster_transform.*,
+                    map_grid,
+                    .left,
+                )) {
+                    monster.direction = try randomToggleDirection(.down_left);
+                    continue;
+                }
+                monster_transform.x -= VELOCITY;
+                monster_transform.y += VELOCITY;
+            },
+            .down_right => {
+                if (try grid_collision.getDirectedBlock(
+                    monster_tex,
+                    monster_transform.*,
+                    map_grid,
+                    .down,
+                ) or try grid_collision.getDirectedBlock(
+                    monster_tex,
+                    monster_transform.*,
+                    map_grid,
+                    .right,
+                )) {
+                    monster.direction = try randomToggleDirection(.down_right);
+                    continue;
+                }
+                monster_transform.x -= VELOCITY;
+                monster_transform.y -= VELOCITY;
+            },
+            .left => {
+                if (try grid_collision.getDirectedBlock(
+                    monster_tex,
+                    monster_transform.*,
+                    map_grid,
+                    .left,
+                )) {
+                    monster.direction = try randomToggleDirection(.left);
+                    continue;
+                }
+                monster_transform.x -= VELOCITY;
+            },
+            .right => {
+                if (try grid_collision.getDirectedBlock(
+                    monster_tex,
+                    monster_transform.*,
+                    map_grid,
+                    .right,
+                )) {
+                    monster.direction = try randomToggleDirection(.right);
+                    continue;
+                }
+                monster_transform.x += VELOCITY;
+            },
+        }
+    }
+}
+
+fn randomToggleDirection(curr_direction: Monster.Direction) !Monster.Direction {
+    var buffer_seed: u8 = undefined;
+    try std.posix.getrandom(std.mem.asBytes(&buffer_seed));
+    var rand = std.Random.DefaultPrng.init(buffer_seed);
+
+    while (true) {
+        const idx = rand.random().intRangeAtMost(usize, 0, 7);
+        if (idx != @intFromEnum(curr_direction)) return @enumFromInt(idx);
+    }
+}
