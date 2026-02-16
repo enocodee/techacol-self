@@ -20,7 +20,7 @@ const Map = map.Map;
 const SpawnMap = map.SpawnMap;
 const SpawnMonster = eno.ecs.system.Set{ .name = "spawn_monster" };
 
-const Monster = struct {
+pub const Monster = struct {
     direction: Direction = .up,
 
     pub const Direction = enum {
@@ -35,7 +35,7 @@ const Monster = struct {
     };
 };
 const NUM_OF_MONSTERS = 10;
-const VELOCITY = 5;
+const VELOCITY = 1;
 
 pub fn build(w: *World) void {
     _ = w
@@ -46,7 +46,11 @@ pub fn build(w: *World) void {
             .{ .after = &.{SpawnMap} },
         )
         .addSystemWithConfig(.system, scheds.startup, spawn, .{ .in_sets = &.{SpawnMonster} })
-        .addSystem(.system, scheds.update, movement);
+        .addSystems(
+        .system,
+        scheds.update,
+        .{ movement, onDespawn },
+    );
 }
 
 fn randomPos(
@@ -90,7 +94,7 @@ fn spawn(
     }
 }
 
-// TODO:
+// TODO: add .follow_player
 fn movement(
     w: *World,
     monster_q: Query(&.{ *Transform, rl.Texture2D, *Monster }),
@@ -239,5 +243,24 @@ fn randomToggleDirection(curr_direction: Monster.Direction) !Monster.Direction {
     while (true) {
         const idx = rand.random().intRangeAtMost(usize, 0, 7);
         if (idx != @intFromEnum(curr_direction)) return @enumFromInt(idx);
+    }
+}
+
+pub fn onDespawn(
+    w: *World,
+    monster_q: Query(&.{
+        health_bar.HealthBarTarget,
+        eno.ecs.Entity.ID,
+        With(&.{Monster}),
+    }),
+) !void {
+    for (monster_q.many()) |query| {
+        const target, const entity_id = query;
+        const health: health_bar.HealthBar =
+            (try w
+                .entity(target.hb_id)
+                .getComponents(&.{health_bar.HealthBar}))[0];
+
+        if (health.curr_value <= 0) try w.entity(entity_id).despawnRecursive();
     }
 }
