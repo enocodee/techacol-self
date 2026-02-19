@@ -9,6 +9,7 @@ const debug_mod = @import("features/debug/mod.zig");
 const map_mod = @import("features/map/mod.zig");
 const player_mod = @import("features/player/mod.zig");
 const monster_mod = @import("features/monster/mod.zig");
+const gui_mod = @import("gui/mod.zig");
 
 const World = ecs.World;
 const GameAssets = @import("GameAssets.zig");
@@ -37,6 +38,7 @@ fn loop(alloc: std.mem.Allocator) !void {
             map_mod,
             player_mod,
             debug_mod,
+            gui_mod,
         })
         .run();
 }

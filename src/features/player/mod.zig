@@ -3,6 +3,7 @@ const eno = @import("eno");
 const common = eno.common;
 const rl = common.raylib;
 const scheds = common.schedules;
+const Health = @import("../general_components.zig").Health;
 
 const World = eno.ecs.World;
 const Transform = common.Transform;
@@ -11,9 +12,7 @@ const systems = @import("systems.zig");
 
 pub const MOVEMENT_VELOCITY = 5;
 
-pub const Player = struct {
-    health: u32 = 100,
-};
+pub const Player = struct {};
 
 pub const SkillAnimationInfo = struct {
     texture: rl.Texture,
@@ -76,6 +75,7 @@ fn spawn(w: *World) !void {
     const map_img = try common.raylib.loadImage("assets/main_char.png");
     _ = w.spawnEntity(&.{
         Player{},
+        Health.init(100),
         rl.Camera2D{
             .offset = .{
                 .x = @floatFromInt(@divTrunc(rl.getScreenWidth(), 2)),
@@ -85,7 +85,7 @@ fn spawn(w: *World) !void {
             .rotation = 0,
             .zoom = 2.0,
         },
-        try common.Texture2D.fromImage(map_img),
+        try rl.Texture2D.fromImage(map_img),
         Transform.fromXYZ(50, 50, 1),
     });
 }
