@@ -6,6 +6,8 @@ const grid_collision = @import("extra_modules").grid_collision;
 const health_bar = @import("extra_modules").health_bar;
 const mod = @import("mod.zig");
 
+const HitGui = @import("../../gui/mod.zig").Hit;
+
 const World = eno.ecs.World;
 const Query = eno.ecs.query.Query;
 const Resource = eno.ecs.query.Resource;
@@ -131,6 +133,21 @@ pub fn onAttack(
                 ),
                 .init(p_center_x, p_center_y),
             ) <= 25) {
+                _ = w.spawnEntity(.{
+                    try HitGui.init(1000),
+                    common.TextBundle{
+                        .text = try .initWithDefaultFont(
+                            .{ .allocated = try std.fmt.allocPrintSentinel(w.alloc, "{d}", .{10}, 0) },
+                            .red,
+                            10,
+                        ),
+                        .transform = .{
+                            .x = m_transform.x - 5,
+                            .y = m_transform.y - 5,
+                            .z = m_transform.z,
+                        },
+                    },
+                });
                 health.curr_value -= 10;
             }
         }
