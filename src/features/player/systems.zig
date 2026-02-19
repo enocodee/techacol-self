@@ -12,6 +12,7 @@ const Resource = eno.ecs.query.Resource;
 const With = eno.ecs.query.With;
 const Transform = common.Transform;
 
+const Health = @import("../general_components.zig").Health;
 const Map = @import("../map/mod.zig").Map;
 const Monster = @import("../monster/mod.zig").Monster;
 
@@ -192,4 +193,16 @@ pub fn onWindowResize(
             @floatFromInt(@divTrunc(rl.getScreenHeight(), 2)),
         );
     }
+}
+
+pub fn onDespawn(
+    w: *World,
+    player_q: Query(&.{
+        Health,
+        eno.ecs.Entity.ID,
+        With(&.{Player}),
+    }),
+) !void {
+    const health, const entity_id = player_q.single();
+    if (health.current <= 0) try w.entity(entity_id).despawnRecursive();
 }

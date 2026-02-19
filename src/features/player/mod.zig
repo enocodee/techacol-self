@@ -10,7 +10,7 @@ const Transform = common.Transform;
 
 const systems = @import("systems.zig");
 
-pub const MOVEMENT_VELOCITY = 5;
+pub const MOVEMENT_VELOCITY = 2;
 
 pub const Player = struct {};
 
@@ -63,6 +63,7 @@ pub fn build(w: *World) void {
             .system,
             scheds.update,
             &.{
+                systems.onDespawn,
                 systems.movement,
                 systems.updateCam,
                 systems.onWindowResize,
