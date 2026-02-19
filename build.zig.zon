@@ -7,8 +7,8 @@
             .hash = "raylib_zig-5.6.0-dev-KE8REGNJBQDSjjyCmf4ATVQtk_OaBpY0B7kBxwSOPEGZ",
         },
         .enogine = .{
-            .url = "git+https://github.com/enocodee/enogine#4622e0fe93408bccb54ed96e31325f6a33d5b56e",
-            .hash = "enogine-0.0.0-YBWrW3u3EAAsgAwTwhefRuA7oCr8x_iqZg1YdyZTllfK",
+            .url = "git+https://github.com/enocodee/enogine#4166add0b0529ea8b188a7c5668ead55fd0b24eb",
+            .hash = "enogine-0.0.0-YBWrW2W-EABY6e236Pggrap1PDPLMMeqFqwtJ3QJXAdc",
         },
     },
     .minimum_zig_version = "0.15.1",
