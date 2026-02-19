@@ -19,7 +19,6 @@ const Monster = mod.Monster;
 const VELOCITY = mod.VELOCITY;
 const FOLLOW_RANGE = mod.FOLLOW_RANGE;
 
-// TODO: add .follow_player
 pub fn movement(
     w: *World,
     monster_q: Query(&.{ *Transform, rl.Texture2D, *Monster }),
