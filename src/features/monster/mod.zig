@@ -3,7 +3,6 @@ const eno = @import("eno");
 const common = eno.common;
 const rl = common.raylib;
 const scheds = common.schedules;
-const grid_collision = @import("extra_modules").grid_collision;
 
 const With = eno.ecs.query.With;
 const Query = eno.ecs.query.Query;
@@ -20,8 +19,11 @@ const Map = map.Map;
 const SpawnMap = map.SpawnMap;
 const SpawnMonster = eno.ecs.system.Set{ .name = "spawn_monster" };
 
+const systems = @import("systems.zig");
+
 pub const Monster = struct {
     direction: Direction = .up,
+    is_following_player: bool = false,
 
     pub const Direction = enum {
         up,
@@ -34,8 +36,10 @@ pub const Monster = struct {
         right,
     };
 };
+pub const VELOCITY = 1;
+pub const FOLLOW_RANGE = 100;
+
 const NUM_OF_MONSTERS = 10;
-const VELOCITY = 1;
 
 pub fn build(w: *World) void {
     _ = w
@@ -49,7 +53,12 @@ pub fn build(w: *World) void {
         .addSystems(
         .system,
         scheds.update,
-        .{ movement, onDespawn },
+        .{
+            systems.onDespawn,
+            systems.movement,
+            systems.onAttack,
+            systems.onFollowPlayer,
+        },
     );
 }
 
@@ -76,10 +85,13 @@ fn spawn(
     const crab_img = try common.raylib.loadImage("assets/crab.png");
 
     for (0..NUM_OF_MONSTERS) |_| {
-        const pos = try randomPos(map_tex.width, map_tex.height);
+        const pos = try randomPos(
+            map_tex.width - @divTrunc(map_tex.width, 2),
+            map_tex.height - @divTrunc(map_tex.height, 2),
+        );
 
         try w.spawnEntity(&.{
-            try common.Texture2D.fromImage(crab_img),
+            try rl.Texture2D.fromImage(crab_img),
             Transform.fromXYZ(pos.x, pos.y, 1),
             Monster{},
         }).withChildren(struct {
@@ -91,176 +103,5 @@ fn spawn(
                 _ = parent.setComponent(HealthBarTarget, .{ .hb_id = entity.id });
             }
         }.cb);
-    }
-}
-
-// TODO: add .follow_player
-fn movement(
-    w: *World,
-    monster_q: Query(&.{ *Transform, rl.Texture2D, *Monster }),
-    map_q: Query(&.{ common.InGrid, With(&.{Map}) }),
-) !void {
-    for (monster_q.many()) |query| {
-        const monster_transform: *Transform = query[0];
-        const monster_tex: rl.Texture2D = query[1];
-        const monster: *Monster = query[2];
-
-        const map_grid: common.Grid =
-            (try w
-                .entity(map_q.single()[0].grid_entity)
-                .getComponents(&.{common.Grid}))[0];
-
-        switch (monster.direction) {
-            .up => {
-                if (try grid_collision.getDirectedBlock(
-                    monster_tex,
-                    monster_transform.*,
-                    map_grid,
-                    .up,
-                )) {
-                    monster.direction = try randomToggleDirection(.up);
-                    continue;
-                }
-                monster_transform.y -= VELOCITY;
-            },
-            .up_left => {
-                if (try grid_collision.getDirectedBlock(
-                    monster_tex,
-                    monster_transform.*,
-                    map_grid,
-                    .up,
-                ) or try grid_collision.getDirectedBlock(
-                    monster_tex,
-                    monster_transform.*,
-                    map_grid,
-                    .left,
-                )) {
-                    monster.direction = try randomToggleDirection(.up_left);
-                    continue;
-                }
-                monster_transform.x -= VELOCITY;
-                monster_transform.y -= VELOCITY;
-            },
-            .up_right => {
-                if (try grid_collision.getDirectedBlock(
-                    monster_tex,
-                    monster_transform.*,
-                    map_grid,
-                    .up,
-                ) or try grid_collision.getDirectedBlock(
-                    monster_tex,
-                    monster_transform.*,
-                    map_grid,
-                    .right,
-                )) {
-                    monster.direction = try randomToggleDirection(.up_left);
-                    continue;
-                }
-                monster_transform.x += VELOCITY;
-                monster_transform.y -= VELOCITY;
-            },
-            .down => {
-                if (try grid_collision.getDirectedBlock(
-                    monster_tex,
-                    monster_transform.*,
-                    map_grid,
-                    .down,
-                )) {
-                    monster.direction = try randomToggleDirection(.down);
-                    continue;
-                }
-                monster_transform.y += VELOCITY;
-            },
-            .down_left => {
-                if (try grid_collision.getDirectedBlock(
-                    monster_tex,
-                    monster_transform.*,
-                    map_grid,
-                    .down,
-                ) or try grid_collision.getDirectedBlock(
-                    monster_tex,
-                    monster_transform.*,
-                    map_grid,
-                    .left,
-                )) {
-                    monster.direction = try randomToggleDirection(.down_left);
-                    continue;
-                }
-                monster_transform.x -= VELOCITY;
-                monster_transform.y += VELOCITY;
-            },
-            .down_right => {
-                if (try grid_collision.getDirectedBlock(
-                    monster_tex,
-                    monster_transform.*,
-                    map_grid,
-                    .down,
-                ) or try grid_collision.getDirectedBlock(
-                    monster_tex,
-                    monster_transform.*,
-                    map_grid,
-                    .right,
-                )) {
-                    monster.direction = try randomToggleDirection(.down_right);
-                    continue;
-                }
-                monster_transform.x -= VELOCITY;
-                monster_transform.y -= VELOCITY;
-            },
-            .left => {
-                if (try grid_collision.getDirectedBlock(
-                    monster_tex,
-                    monster_transform.*,
-                    map_grid,
-                    .left,
-                )) {
-                    monster.direction = try randomToggleDirection(.left);
-                    continue;
-                }
-                monster_transform.x -= VELOCITY;
-            },
-            .right => {
-                if (try grid_collision.getDirectedBlock(
-                    monster_tex,
-                    monster_transform.*,
-                    map_grid,
-                    .right,
-                )) {
-                    monster.direction = try randomToggleDirection(.right);
-                    continue;
-                }
-                monster_transform.x += VELOCITY;
-            },
-        }
-    }
-}
-
-fn randomToggleDirection(curr_direction: Monster.Direction) !Monster.Direction {
-    var buffer_seed: u8 = undefined;
-    try std.posix.getrandom(std.mem.asBytes(&buffer_seed));
-    var rand = std.Random.DefaultPrng.init(buffer_seed);
-
-    while (true) {
-        const idx = rand.random().intRangeAtMost(usize, 0, 7);
-        if (idx != @intFromEnum(curr_direction)) return @enumFromInt(idx);
-    }
-}
-
-pub fn onDespawn(
-    w: *World,
-    monster_q: Query(&.{
-        health_bar.HealthBarTarget,
-        eno.ecs.Entity.ID,
-        With(&.{Monster}),
-    }),
-) !void {
-    for (monster_q.many()) |query| {
-        const target, const entity_id = query;
-        const health: health_bar.HealthBar =
-            (try w
-                .entity(target.hb_id)
-                .getComponents(&.{health_bar.HealthBar}))[0];
-
-        if (health.curr_value <= 0) try w.entity(entity_id).despawnRecursive();
     }
 }
