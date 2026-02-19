@@ -17,7 +17,7 @@ pub fn build(w: *World) void {
         })
         .addSystemWithConfig(
         .render,
-        scheds.update,
+        eno.render.schedules.ui_process_render,
         systems.render,
         .{ .in_sets = &.{@import("eno").render.UiRenderSet} },
     );

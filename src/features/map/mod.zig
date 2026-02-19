@@ -1,5 +1,6 @@
 const eno = @import("eno");
 const common = eno.common;
+const rl = common.raylib;
 const scheds = common.schedules;
 
 const World = eno.ecs.World;
@@ -29,11 +30,11 @@ fn spawn(w: *World) !void {
 
     try w.spawnEntity(&.{
         Map{},
-        try common.Texture2D.fromImage(map_img),
+        try rl.Texture2D.fromImage(map_img),
         Transform.fromXYZ(0, 0, 0),
     }).withChildren(struct {
         pub fn cb(parent: eno.ecs.Entity) !void {
-            const parent_transform = (try parent.getComponents(&.{Transform}))[0];
+            const parent_transform, const parent_texture = try parent.getComponents(&.{ Transform, rl.Texture2D });
             var grid = common.Grid{
                 .num_of_cols = 120,
                 .num_of_rows = 59,
@@ -43,7 +44,11 @@ fn spawn(w: *World) !void {
                 .color = .red,
                 .render_mode = .none,
             };
-            grid.initCells(parent.world.alloc, parent_transform.x, parent_transform.y);
+            grid.initCells(
+                parent.world.alloc,
+                parent_transform.x - @divTrunc(parent_texture.width, 2),
+                parent_transform.y - @divTrunc(parent_texture.height, 2),
+            );
 
             const entity = parent.spawn(&.{
                 common.GridBundle{

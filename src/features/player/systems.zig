@@ -113,9 +113,6 @@ pub fn onAttack(
         const p_center_x: f32 = @floatFromInt(p_transform.x + @divTrunc(p_tex.width, 2));
         const p_center_y: f32 = @floatFromInt(p_transform.y + @divTrunc(p_tex.height, 2));
 
-        const monster_half_width = @divTrunc(monster_q.single()[0].width, 2);
-        const monster_half_height = @divTrunc(monster_q.single()[0].height, 2);
-
         // TODO: enhance by spatial queries
         for (monster_q.many()) |query| {
             _, const m_transform, const hb = query;
@@ -126,8 +123,8 @@ pub fn onAttack(
 
             if (rl.Vector2.distance(
                 .init(
-                    @floatFromInt(m_transform.x + monster_half_width),
-                    @floatFromInt(m_transform.y + monster_half_height),
+                    @floatFromInt(m_transform.x),
+                    @floatFromInt(m_transform.y),
                 ),
                 .init(p_center_x, p_center_y),
             ) <= 25) {
