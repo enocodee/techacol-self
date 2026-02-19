@@ -18,7 +18,7 @@ const Monster = @import("../monster/mod.zig").Monster;
 
 const VELOCITY = mod.MOVEMENT_VELOCITY;
 const Player = mod.Player;
-const PlayerSkillAnimationInfo = mod.SkillAnimationInfo;
+const Skill = mod.Skill;
 
 pub fn updateCam(
     player_q: Query(&.{
@@ -93,7 +93,7 @@ pub fn movement(
 
 pub fn onAttack(
     w: *World,
-    skill_anim_res: Resource(*PlayerSkillAnimationInfo),
+    skill_res: Resource(*Skill),
     monster_q: Query(&.{
         rl.Texture,
         Transform,
@@ -108,8 +108,10 @@ pub fn onAttack(
 ) !void {
     if (rl.isKeyPressed(.j)) {
         const p_tex, const p_transform = player_q.single();
-        const skill_anim = skill_anim_res.result;
-        skill_anim.current_frame = 0;
+        const skill = skill_res.result;
+        if (!skill.doneCooldown()) return;
+
+        skill.current_frame = 0;
 
         const p_center_x: f32 = @floatFromInt(p_transform.x + @divTrunc(p_tex.width, 2));
         const p_center_y: f32 = @floatFromInt(p_transform.y + @divTrunc(p_tex.height, 2));
@@ -136,17 +138,19 @@ pub fn onAttack(
 }
 
 pub fn drawSlashAnimation(
-    skill_anim_res: Resource(*PlayerSkillAnimationInfo),
+    skill_res: Resource(*Skill),
     player_q: Query(&.{ Transform, With(&.{Player}) }),
 ) !void {
-    const skill_anim = skill_anim_res.result;
-    // Skip if at the final frame
-    if (skill_anim.current_frame == skill_anim.total_frames)
+    const skill = skill_res.result;
+    if (skill.current_frame == skill.total_frames) {
+        skill.is_active = false;
         return;
+    } else if (skill.current_frame == 0)
+        skill.is_active = true;
 
     const player_transform = player_q.single()[0];
-    const frame_width: f32 = @floatFromInt(@divTrunc(skill_anim.texture.width, 6));
-    const frame_height: f32 = @floatFromInt(@divTrunc(skill_anim.texture.height, 5));
+    const frame_width: f32 = @floatFromInt(@divTrunc(skill.texture.width, 6));
+    const frame_height: f32 = @floatFromInt(@divTrunc(skill.texture.height, 5));
     const scale_factor = 0.7;
 
     var origin_frame_rec: rl.Rectangle = .{
@@ -161,22 +165,22 @@ pub fn drawSlashAnimation(
         .width = frame_width * scale_factor,
         .height = frame_height * scale_factor,
     };
-    origin_frame_rec.x = @as(f32, @floatFromInt(skill_anim.current_frame)) * frame_width;
+    origin_frame_rec.x = @as(f32, @floatFromInt(skill.current_frame)) * frame_width;
 
-    skill_anim.texture.drawPro(
+    skill.texture.drawPro(
         origin_frame_rec,
         scaled_frame_rec,
         .init(
-            @floatFromInt(-player_transform.x + 15),
-            @floatFromInt(-player_transform.y + 25),
+            @floatFromInt(-player_transform.x + 25),
+            @floatFromInt(-player_transform.y + 35),
         ),
         0,
         .white,
     );
 
-    if (skill_anim.tick()) {
-        skill_anim.start();
-        skill_anim.current_frame += 1;
+    if (skill.tickAnimation()) {
+        skill.start();
+        skill.current_frame += 1;
     }
 }
 
@@ -206,3 +210,4 @@ pub fn onDespawn(
     const health, const entity_id = player_q.single();
     if (health.current <= 0) try w.entity(entity_id).despawnRecursive();
 }
+
