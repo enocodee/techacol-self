@@ -68,5 +68,12 @@ fn update(
     const health = player_q.single()[0];
     const health_bar, const style = health_bar_q.single();
     const curr_percetange = health.getCurrentPercetange();
-    style.width = @intFromFloat(@as(f32, @floatFromInt(health_bar.max_width)) * curr_percetange);
+
+    style.width = @max(0, @as(
+        u32,
+        @intFromFloat(@as(
+            f32,
+            @floatFromInt(health_bar.max_width),
+        ) * curr_percetange),
+    ));
 }
