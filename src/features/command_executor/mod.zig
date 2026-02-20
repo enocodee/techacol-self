@@ -3,8 +3,6 @@ const World = @import("eno").ecs.World;
 const QueryError = @import("eno").ecs.query.QueryError;
 const Command = @import("../interpreter/command.zig").Command;
 
-const digger = @import("../digger/mod.zig");
-
 pub const CommandExecutor = struct {
     queue: Queue,
     /// the `World.alloc`
@@ -105,17 +103,6 @@ pub const CommandExecutor = struct {
         command: Command,
     ) QueryError!void {
         switch (command) {
-            .move => |direction| {
-                self.timer.?.reset();
-                try digger.move.control(w, direction);
-            },
-            .isEdge => |direction| {
-                self.timer.?.reset();
-                self.last_bool_result = try digger.check.isEdge(
-                    w,
-                    direction,
-                );
-            },
             // NOTE: Language features
             .skip => |value| self.curr_idx += value + 1,
             .@"if" => |info| {

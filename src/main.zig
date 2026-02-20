@@ -2,13 +2,14 @@ const std = @import("std");
 const schedules = @import("eno").common.schedules;
 const eno = @import("eno");
 const ecs = eno.ecs;
-
-const digger_mod = @import("features/digger/mod.zig");
-const area_mod = @import("features/area/mod.zig");
-const terminal_mod = @import("features/terminal/mod.zig");
-const debug_mod = @import("features/debug/mod.zig");
-const score_mod = @import("features/score/mod.zig");
 const rl = eno.common.raylib;
+const extra_mods = @import("extra_modules");
+
+const debug_mod = @import("features/debug/mod.zig");
+const map_mod = @import("features/map/mod.zig");
+const player_mod = @import("features/player/mod.zig");
+const monster_mod = @import("features/monster/mod.zig");
+const gui_mod = @import("gui/mod.zig");
 
 const World = ecs.World;
 const GameAssets = @import("GameAssets.zig");
@@ -26,15 +27,18 @@ fn loop(alloc: std.mem.Allocator) !void {
     rl.setTargetFPS(60);
 
     try world
-        .addModules(&.{eno.common.CommonModule})
+        .addModules(&.{
+            eno.common.CommonModule,
+            extra_mods.health_bar,
+        })
         .addResource(GameAssets, .{})
         .addSystems(.system, schedules.update, &.{closeWindow})
         .addModules(&.{
-            area_mod,
-            terminal_mod,
-            digger_mod,
-            score_mod,
+            monster_mod,
+            map_mod,
+            player_mod,
             debug_mod,
+            gui_mod,
         })
         .run();
 }

@@ -5,6 +5,14 @@ pub fn build(b: *std.Build) void {
     const o = b.standardOptimizeOption(.{});
 
     const eno = b.dependency("enogine", .{}).module("eno");
+    const extra_mods = b.createModule(.{
+        .root_source_file = b.path("src/extra-modules/mod.zig"),
+        .target = t,
+        .optimize = o,
+        .imports = &.{
+            .{ .name = "eno", .module = eno },
+        },
+    });
 
     {
         const exe = b.addExecutable(.{
@@ -16,6 +24,7 @@ pub fn build(b: *std.Build) void {
             }),
         });
         exe.root_module.addImport("eno", eno);
+        exe.root_module.addImport("extra_modules", extra_mods);
         b.installArtifact(exe);
 
         const run_step = b.step("run", "Run the application");
@@ -39,6 +48,7 @@ pub fn build(b: *std.Build) void {
         const run_test = b.addRunArtifact(test_exe);
 
         test_exe.root_module.addImport("eno", eno);
+        test_exe.root_module.addImport("extra_modules", extra_mods);
         run_test_step.dependOn(&run_test.step);
     }
 }
