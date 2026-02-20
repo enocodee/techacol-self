@@ -55,7 +55,7 @@ pub const AttackInfo = struct {
 pub const VELOCITY = 1;
 pub const FOLLOW_RANGE = 100;
 
-const NUM_OF_MONSTERS = 1000;
+const NUM_OF_MONSTERS = 10;
 
 pub fn build(w: *World) void {
     _ = w
