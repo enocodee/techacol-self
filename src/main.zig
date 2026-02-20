@@ -30,6 +30,7 @@ fn loop(alloc: std.mem.Allocator) !void {
         .addModules(&.{
             eno.common.CommonModule,
             extra_mods.health_bar,
+            extra_mods.animator,
         })
         .addResource(GameAssets, .{})
         .addSystems(.system, schedules.update, &.{closeWindow})

@@ -2,8 +2,9 @@ const std = @import("std");
 const eno = @import("eno");
 const common = eno.common;
 const rl = common.raylib;
-const grid_collision = @import("extra_modules").grid_collision;
-const health_bar = @import("extra_modules").health_bar;
+const extra_mods = @import("extra_modules");
+const grid_collision = extra_mods.grid_collision;
+const health_bar = extra_mods.health_bar;
 const mod = @import("mod.zig");
 
 const HitGui = @import("../../gui/mod.zig").Hit;
@@ -17,6 +18,7 @@ const Transform = common.Transform;
 const Health = @import("../general_components.zig").Health;
 const Map = @import("../map/mod.zig").Map;
 const Monster = @import("../monster/mod.zig").Monster;
+const AnimationData = extra_mods.animator.Data;
 
 const VELOCITY = mod.MOVEMENT_VELOCITY;
 const Player = mod.Player;
@@ -95,7 +97,6 @@ pub fn movement(
 
 pub fn onAttack(
     w: *World,
-    skill_res: Resource(*Skill),
     monster_q: Query(&.{
         rl.Texture,
         Transform,
@@ -103,20 +104,19 @@ pub fn onAttack(
         With(&.{Monster}),
     }),
     player_q: Query(&.{
-        rl.Texture,
         Transform,
         With(&.{Player}),
     }),
+    skill_q: Query(&.{
+        *Skill,
+        *AnimationData,
+    }),
 ) !void {
     if (rl.isKeyPressed(.j)) {
-        const p_tex, const p_transform = player_q.single();
-        const skill = skill_res.result;
+        const p_transform = player_q.single()[0];
+        const skill, const animation = skill_q.single();
         if (!skill.doneCooldown()) return;
-
-        skill.current_frame = 0;
-
-        const p_center_x: f32 = @floatFromInt(p_transform.x + @divTrunc(p_tex.width, 2));
-        const p_center_y: f32 = @floatFromInt(p_transform.y + @divTrunc(p_tex.height, 2));
+        skill.start(animation);
 
         // TODO: enhance by spatial queries
         for (monster_q.many()) |query| {
@@ -131,7 +131,10 @@ pub fn onAttack(
                     @floatFromInt(m_transform.x),
                     @floatFromInt(m_transform.y),
                 ),
-                .init(p_center_x, p_center_y),
+                .init(
+                    @floatFromInt(p_transform.x),
+                    @floatFromInt(p_transform.y),
+                ),
             ) <= 25) {
                 _ = w.spawnEntity(.{
                     try HitGui.init(1000),
@@ -151,53 +154,6 @@ pub fn onAttack(
                 health.curr_value -= 10;
             }
         }
-    }
-}
-
-pub fn drawSlashAnimation(
-    skill_res: Resource(*Skill),
-    player_q: Query(&.{ Transform, With(&.{Player}) }),
-) !void {
-    const skill = skill_res.result;
-    if (skill.current_frame == skill.total_frames) {
-        skill.is_active = false;
-        return;
-    } else if (skill.current_frame == 0)
-        skill.is_active = true;
-
-    const player_transform = player_q.single()[0];
-    const frame_width: f32 = @floatFromInt(@divTrunc(skill.texture.width, 6));
-    const frame_height: f32 = @floatFromInt(@divTrunc(skill.texture.height, 5));
-    const scale_factor = 0.7;
-
-    var origin_frame_rec: rl.Rectangle = .{
-        .x = 0,
-        .y = frame_height * 1,
-        .width = frame_width,
-        .height = frame_height,
-    };
-    const scaled_frame_rec: rl.Rectangle = .{
-        .x = 0,
-        .y = 0,
-        .width = frame_width * scale_factor,
-        .height = frame_height * scale_factor,
-    };
-    origin_frame_rec.x = @as(f32, @floatFromInt(skill.current_frame)) * frame_width;
-
-    skill.texture.drawPro(
-        origin_frame_rec,
-        scaled_frame_rec,
-        .init(
-            @floatFromInt(-player_transform.x + 25),
-            @floatFromInt(-player_transform.y + 35),
-        ),
-        0,
-        .white,
-    );
-
-    if (skill.tickAnimation()) {
-        skill.start();
-        skill.current_frame += 1;
     }
 }
 
@@ -227,4 +183,3 @@ pub fn onDespawn(
     const health, const entity_id = player_q.single();
     if (health.current <= 0) try w.entity(entity_id).despawnRecursive();
 }
-
