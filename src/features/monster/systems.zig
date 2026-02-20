@@ -16,6 +16,7 @@ const Health = @import("../general_components.zig").Health;
 const Player = @import("../player/mod.zig").Player;
 const Map = map.Map;
 const Monster = mod.Monster;
+const AttackInfo = mod.AttackInfo;
 const VELOCITY = mod.VELOCITY;
 const FOLLOW_RANGE = mod.FOLLOW_RANGE;
 
@@ -191,18 +192,20 @@ pub fn onDespawn(
 }
 
 pub fn onAttack(
-    monster_q: Query(&.{ Transform, With(&.{Monster}) }),
+    monster_q: Query(&.{ Transform, *AttackInfo, With(&.{Monster}) }),
     player_q: Query(&.{ Transform, *Health, With(&.{Player}) }),
 ) !void {
     const p_transform, const p_health = player_q.single();
 
     for (monster_q.many()) |query| {
-        const m_transform = query[0];
+        const m_transform, const attack_info: *AttackInfo = query;
 
         if (rl.Vector2.distance(
             .init(@floatFromInt(p_transform.x), @floatFromInt(p_transform.y)),
             .init(@floatFromInt(m_transform.x), @floatFromInt(m_transform.y)),
         ) < 20) {
+            if (attack_info.isCooldown()) continue;
+            attack_info.trigger();
             p_health.current -= 5;
         }
     }

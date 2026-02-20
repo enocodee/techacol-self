@@ -36,10 +36,26 @@ pub const Monster = struct {
         right,
     };
 };
+
+pub const AttackInfo = struct {
+    /// timestamp from the last attack
+    last_ts: i64 = 0,
+    /// (ms)
+    cooldown: u32,
+
+    pub fn trigger(self: *AttackInfo) void {
+        self.last_ts = std.time.milliTimestamp();
+    }
+
+    pub fn isCooldown(self: AttackInfo) bool {
+        return std.time.milliTimestamp() - self.last_ts < self.cooldown;
+    }
+};
+
 pub const VELOCITY = 1;
 pub const FOLLOW_RANGE = 100;
 
-const NUM_OF_MONSTERS = 10;
+const NUM_OF_MONSTERS = 1000;
 
 pub fn build(w: *World) void {
     _ = w
@@ -94,6 +110,7 @@ fn spawn(
             try rl.Texture2D.fromImage(crab_img),
             Transform.fromXYZ(pos.x, pos.y, 1),
             Monster{},
+            AttackInfo{ .cooldown = 2000 },
         }).withChildren(struct {
             pub fn cb(parent: eno.ecs.Entity) !void {
                 const entity = parent.spawn(&.{
